@@ -8,6 +8,7 @@ import { getBandDescriptor, getBandColor } from '@/lib/scoring/band-tables'
 import { formatBandScore, formatScore } from '@/lib/utils/format'
 import { formatDuration } from '@/lib/utils/time'
 import { CheckCircle2, XCircle, Clock, ChevronRight } from 'lucide-react'
+import type { Question } from '@/lib/types'
 
 interface PageProps {
   params: Promise<{ testId: string }>
@@ -114,7 +115,7 @@ export default async function ResultPage({ params, searchParams }: PageProps) {
 
       {/* Answer Review */}
       <div className="space-y-6">
-        {test.sections.map((section: { id: string; title: string; order_num: number; questions: { id: string; order_num: number; type: string; question_text: string; correct_answer: string; acceptable_answers: string[] | null; points: number; hint: string | null; options?: { id: string; label: string; option_text: string; is_correct: boolean; question_id: string }[] }[] }) => (
+        {test.sections.map((section: { id: string; title: string; order_num: number; questions: Question[] }) => (
           <Card key={section.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
