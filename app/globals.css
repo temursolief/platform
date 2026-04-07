@@ -1,26 +1,86 @@
 @import "tailwindcss";
 
 :root {
+  /* Neutral Base */
+  --color-bg: #FFFFFF;
+  --color-bg-secondary: #F9FAFB;
+  --color-bg-tertiary: #F3F4F6;
+
+  /* Text */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #9CA3AF;
+
+  /* Borders */
+  --color-border: #E5E7EB;
+  --color-border-focus: #111827;
+
+  /* Accent */
+  --color-primary: #111827;
+  --color-primary-hover: #1F2937;
+
+  /* Status Colors */
+  --color-success: #059669;
+  --color-error: #DC2626;
+  --color-warning: #D97706;
+  --color-info: #2563EB;
+
+  /* Progress Indicators */
+  --color-answered: #111827;
+  --color-unanswered: #E5E7EB;
+  --color-current: #2563EB;
+
   --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --foreground: #111827;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Reading passage text */
+.passage-text {
+  font-size: 1.125rem;
+  line-height: 1.8;
+}
+
+/* Question text */
+.question-text {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Fill in the blank inputs */
+.blank-input {
+  font-family: 'Menlo', monospace;
+  border-bottom: 2px solid var(--color-border);
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  outline: none;
+}
+
+.blank-input:focus {
+  border-bottom-color: var(--color-border-focus);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
