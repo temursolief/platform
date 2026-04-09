@@ -12,14 +12,29 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Verify test is published
+  // Fetch test — allow the owner (teacher) even if unpublished
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin'
+
   const { data: test } = await supabase
     .from('tests')
-    .select('id, is_published, total_questions')
+    .select('id, teacher_id, is_published, total_questions')
     .eq('id', testId)
     .single()
 
-  if (!test || !test.is_published) {
+  if (!test) return NextResponse.json({ error: 'Test not found' }, { status: 404 })
+
+  // Teachers can only preview their own tests; students need published tests
+  const canAccess = isTeacher
+    ? test.teacher_id === user.id
+    : test.is_published
+
+  if (!canAccess) {
     return NextResponse.json({ error: 'Test not available' }, { status: 404 })
   }
 

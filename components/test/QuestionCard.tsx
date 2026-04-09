@@ -36,6 +36,7 @@ export function QuestionCard({
           />
         )
       case 'true_false_ng':
+      case 'yes_no_ng':
         return (
           <TrueFalseNG
             question={question}
@@ -47,6 +48,7 @@ export function QuestionCard({
       case 'fill_blank':
       case 'sentence_completion':
       case 'summary_completion':
+      case 'note_table_flowchart_completion':
       case 'short_answer':
       case 'diagram_label':
         return (
@@ -59,6 +61,10 @@ export function QuestionCard({
           />
         )
       case 'matching':
+      case 'matching_headings':
+      case 'matching_information':
+      case 'matching_features':
+      case 'matching_sentence_endings':
       case 'list_selection':
         return (
           <Matching
@@ -116,6 +122,17 @@ export function QuestionCard({
           </div>
         )}
       </div>
+
+      {/* Question image (diagram, map, plan, etc.) */}
+      {question.image_url && (
+        <div className="mb-3">
+          <img
+            src={question.image_url}
+            alt="Question diagram"
+            className="max-w-full rounded-lg border border-neutral-200 object-contain max-h-80"
+          />
+        </div>
+      )}
 
       {/* Answer input */}
       {renderInput()}

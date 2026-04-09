@@ -55,19 +55,29 @@ CREATE TABLE IF NOT EXISTS public.questions (
     section_id UUID NOT NULL REFERENCES public.sections(id) ON DELETE CASCADE,
     order_num INTEGER NOT NULL,
     type TEXT NOT NULL CHECK (type IN (
+        -- Reading
         'multiple_choice',
         'true_false_ng',
-        'matching',
-        'fill_blank',
-        'short_answer',
+        'yes_no_ng',
+        'matching_headings',
+        'matching_information',
+        'matching_features',
+        'matching_sentence_endings',
         'sentence_completion',
-        'diagram_label',
         'summary_completion',
-        'list_selection'
+        'note_table_flowchart_completion',
+        'diagram_label',
+        'short_answer',
+        -- Listening / shared
+        'matching',
+        'list_selection',
+        -- Legacy
+        'fill_blank'
     )),
     question_text TEXT NOT NULL,
     correct_answer TEXT NOT NULL,
     acceptable_answers TEXT[],
+    image_url TEXT,
     points INTEGER DEFAULT 1,
     hint TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -287,3 +297,33 @@ CREATE TRIGGER on_auth_user_created
 -- Replace 'user@example.com' with the actual email
 -- ============================================================
 -- UPDATE public.users SET role = 'teacher' WHERE email = 'user@example.com';
+
+-- ============================================================
+-- MIGRATION: Expand question type CHECK constraint
+-- Run this if the questions table already exists with the old
+-- 9-type constraint and you need to add the full IELTS type set.
+-- ============================================================
+--
+-- ALTER TABLE public.questions
+--   DROP CONSTRAINT IF EXISTS questions_type_check;
+
+-- ALTER TABLE public.questions ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+-- ALTER TABLE public.questions
+--   ADD CONSTRAINT questions_type_check CHECK (type IN (
+--     'multiple_choice',
+--     'true_false_ng',
+--     'yes_no_ng',
+--     'matching_headings',
+--     'matching_information',
+--     'matching_features',
+--     'matching_sentence_endings',
+--     'sentence_completion',
+--     'summary_completion',
+--     'note_table_flowchart_completion',
+--     'diagram_label',
+--     'short_answer',
+--     'matching',
+--     'list_selection',
+--     'fill_blank'
+--   ));

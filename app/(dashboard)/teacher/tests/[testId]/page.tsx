@@ -3,12 +3,12 @@
 import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Plus, Trash2, Eye, EyeOff, Upload, Settings } from 'lucide-react'
+import { ChevronLeft, Plus, Trash2, Eye, EyeOff, Upload, Settings, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { Badge } from '@/components/ui/badge'
-import { QuestionEditor } from '@/components/forms/QuestionEditor'
 import { Input, Select, Textarea } from '@/components/ui/input'
+import { QuestionEditor, type QuestionDraft } from '@/components/forms/QuestionEditor'
 import type { TestWithSections } from '@/lib/types'
 import { formatDate } from '@/lib/utils/format'
 
@@ -19,21 +19,119 @@ interface EditTestPageProps {
 export default function EditTestPage({ params }: EditTestPageProps) {
   const { testId } = use(params)
   const router = useRouter()
+
   const [test, setTest] = useState<TestWithSections | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showAddQuestion, setShowAddQuestion] = useState<string | null>(null)
-  const [showSettings, setShowSettings] = useState(false)
-  const [audioFiles, setAudioFiles] = useState<Record<string, File>>({})
 
+  // Modals
+  const [showAddQuestion, setShowAddQuestion] = useState<string | null>(null) // sectionId
+  const [showSettings, setShowSettings] = useState(false)
+
+  // Audio upload state
+  const [audioFiles, setAudioFiles] = useState<Record<string, File>>({})
+  const [audioUploading, setAudioUploading] = useState<string | null>(null)
+
+  // Settings form state (initialised when modal opens)
+  const [settingsTitle, setSettingsTitle] = useState('')
+  const [settingsType, setSettingsType] = useState<'listening' | 'reading'>('listening')
+  const [settingsDifficulty, setSettingsDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
+  const [settingsTimeLimit, setSettingsTimeLimit] = useState(60)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+
+  // New section form (inside Settings modal)
+  const [newSectionTitle, setNewSectionTitle] = useState('')
+  const [newSectionInstructions, setNewSectionInstructions] = useState('')
+  const [addingSect, setAddingSect] = useState(false)
+  const [sectionError, setSectionError] = useState<string | null>(null)
+
+  // -------------------------------------------------------------------------
+  // Load test
+  // -------------------------------------------------------------------------
   useEffect(() => {
     fetch(`/api/tests/${testId}`)
       .then((r) => r.json())
       .then((data) => { setTest(data.test); setLoading(false) })
-      .catch(() => { setError('Failed to load test'); setLoading(false) })
+      .catch(() => { setError('Failed to load test.'); setLoading(false) })
   }, [testId])
 
+  // -------------------------------------------------------------------------
+  // Settings modal helpers
+  // -------------------------------------------------------------------------
+  const openSettings = () => {
+    if (!test) return
+    setSettingsTitle(test.title)
+    setSettingsType(test.type)
+    setSettingsDifficulty(test.difficulty)
+    setSettingsTimeLimit(test.time_limit_minutes)
+    setNewSectionTitle('')
+    setNewSectionInstructions('')
+    setSectionError(null)
+    setShowSettings(true)
+  }
+
+  const saveSettings = async () => {
+    if (!test) return
+    setSettingsSaving(true)
+    try {
+      const res = await fetch(`/api/tests/${testId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: settingsTitle.trim(),
+          type: settingsType,
+          difficulty: settingsDifficulty,
+          time_limit_minutes: settingsTimeLimit,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Failed to save settings.')
+      }
+      const d = await res.json()
+      setTest((t) => t ? { ...t, ...d.test } : t)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save.')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  const addSection = async () => {
+    setSectionError(null)
+    if (!newSectionTitle.trim()) {
+      setSectionError('Section title is required.')
+      return
+    }
+    setAddingSect(true)
+    try {
+      const res = await fetch(`/api/tests/${testId}/sections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newSectionTitle.trim(),
+          instructions: newSectionInstructions.trim() || null,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error ?? 'Failed to add section.')
+      }
+      const d = await res.json()
+      setTest((t) => t ? { ...t, sections: [...t.sections, d.section] } : t)
+      setNewSectionTitle('')
+      setNewSectionInstructions('')
+    } catch (err) {
+      setSectionError(err instanceof Error ? err.message : 'Failed to add section.')
+    } finally {
+      setAddingSect(false)
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Publish / delete
+  // -------------------------------------------------------------------------
   const togglePublish = async () => {
     if (!test) return
     setSaving(true)
@@ -54,105 +152,125 @@ export default function EditTestPage({ params }: EditTestPageProps) {
     router.push('/teacher/tests')
   }
 
-  const handleAddQuestion = async (sectionId: string, question: Record<string, unknown>) => {
+  // -------------------------------------------------------------------------
+  // Add question
+  // -------------------------------------------------------------------------
+  const handleAddQuestion = async (sectionId: string, question: QuestionDraft) => {
     const res = await fetch(`/api/tests/${testId}/questions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...question, section_id: sectionId }),
     })
-    if (!res.ok) throw new Error((await res.json()).error)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      throw new Error(d.error ?? `Server error ${res.status}`)
+    }
     const data = await res.json()
     setTest((t) => {
       if (!t) return t
       return {
         ...t,
         sections: t.sections.map((s) =>
-          s.id === sectionId
-            ? { ...s, questions: [...s.questions, data.question] }
-            : s
+          s.id === sectionId ? { ...s, questions: [...s.questions, data.question] } : s
         ),
       }
     })
     setShowAddQuestion(null)
   }
 
+  // -------------------------------------------------------------------------
+  // Audio upload
+  // -------------------------------------------------------------------------
   const uploadAudio = async (sectionId: string) => {
     const file = audioFiles[sectionId]
     if (!file) return
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('testId', testId)
-    formData.append('type', 'audio')
+    setAudioUploading(sectionId)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('testId', testId)
+      formData.append('type', 'audio')
 
-    const res = await fetch('/api/upload', { method: 'POST', body: formData })
-    if (!res.ok) { setError('Upload failed'); return }
-    const { url } = await res.json()
-
-    // Update section with audio url
-    await fetch(`/api/tests/${testId}/sections/${sectionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audio_url: url }),
-    })
-    setTest((t) => {
-      if (!t) return t
-      return {
-        ...t,
-        sections: t.sections.map((s) =>
-          s.id === sectionId ? { ...s, audio_url: url } : s
-        ),
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        throw new Error(d.error ?? 'Upload failed.')
       }
-    })
+      const { url } = await res.json()
+
+      await fetch(`/api/tests/${testId}/sections/${sectionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_url: url }),
+      })
+      setTest((t) =>
+        t ? { ...t, sections: t.sections.map((s) => s.id === sectionId ? { ...s, audio_url: url } : s) } : t
+      )
+      setAudioFiles((p) => { const next = { ...p }; delete next[sectionId]; return next })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.')
+    } finally {
+      setAudioUploading(null)
+    }
   }
 
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
   if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center text-neutral-400">
-        Loading...
-      </div>
-    )
+    return <div className="p-8 text-neutral-400 text-center">Loading…</div>
   }
 
   if (!test) {
     return (
       <div className="p-8 text-center text-neutral-400">
-        Test not found. <Link href="/teacher/tests" className="text-blue-600 hover:underline">Go back</Link>
+        Test not found.{' '}
+        <Link href="/teacher/tests" className="text-blue-600 hover:underline">Go back</Link>
       </div>
     )
   }
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="mb-6">
-        <Link href="/teacher/tests" className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 mb-4">
+        <Link
+          href="/teacher/tests"
+          className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 mb-4"
+        >
           <ChevronLeft size={16} /> Back to Tests
         </Link>
-        <div className="flex items-start justify-between">
+
+        <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-neutral-900">{test.title}</h1>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Badge variant={test.type === 'listening' ? 'listening' : 'reading'}>{test.type}</Badge>
+              <Badge>{test.difficulty}</Badge>
               <Badge variant={test.is_published ? 'success' : 'default'}>
                 {test.is_published ? 'Published' : 'Draft'}
               </Badge>
               <span className="text-xs text-neutral-400">Updated {formatDate(test.updated_at)}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
-              <Settings size={16} className="mr-1" /> Settings
+
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            <Button variant="secondary" size="sm" onClick={openSettings}>
+              <Settings size={15} className="mr-1.5" /> Settings
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={togglePublish}
-              loading={saving}
-            >
-              {test.is_published ? <><EyeOff size={16} className="mr-1" /> Unpublish</> : <><Eye size={16} className="mr-1" /> Publish</>}
+            <Link href={`/student/tests/${testId}`}>
+              <Button variant="secondary" size="sm">
+                <Eye size={15} className="mr-1.5" /> Preview Test
+              </Button>
+            </Link>
+            <Button variant="secondary" size="sm" onClick={togglePublish} loading={saving}>
+              {test.is_published
+                ? <><EyeOff size={15} className="mr-1.5" /> Unpublish</>
+                : <><Eye size={15} className="mr-1.5" /> Publish</>}
             </Button>
             <Button variant="danger" size="sm" onClick={deleteTest}>
-              <Trash2 size={16} className="mr-1" /> Delete
+              <Trash2 size={15} className="mr-1.5" /> Delete
             </Button>
           </div>
         </div>
@@ -164,21 +282,25 @@ export default function EditTestPage({ params }: EditTestPageProps) {
         </div>
       )}
 
-      {/* Sections */}
+      {/* ── Sections ── */}
       {test.sections.length === 0 ? (
-        <div className="text-center py-12 text-neutral-400 border-2 border-dashed border-neutral-200 rounded-xl">
-          <p className="mb-2">No sections yet.</p>
-          <p className="text-sm">Add sections via the Settings panel or by uploading a JSON test.</p>
+        <div className="text-center py-14 text-neutral-400 border-2 border-dashed border-neutral-200 rounded-xl">
+          <p className="mb-2 font-medium">No sections yet</p>
+          <p className="text-sm mb-4">Open <strong>Settings</strong> to add your first section.</p>
+          <Button variant="secondary" size="sm" onClick={openSettings}>
+            <Settings size={14} className="mr-1.5" /> Open Settings
+          </Button>
         </div>
       ) : (
         <div className="space-y-6">
           {test.sections.map((section) => (
             <div key={section.id} className="border border-neutral-200 rounded-xl overflow-hidden">
+              {/* Section header */}
               <div className="bg-neutral-50 px-5 py-3 flex items-center justify-between border-b border-neutral-200">
-                <h3 className="font-semibold text-neutral-800">
+                <h3 className="font-semibold text-neutral-800 text-sm">
                   {section.title || `Section ${section.order_num}`}
                 </h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {test.type === 'listening' && (
                     <div className="flex items-center gap-2">
                       <input
@@ -193,46 +315,63 @@ export default function EditTestPage({ params }: EditTestPageProps) {
                       />
                       <label
                         htmlFor={`audio-${section.id}`}
-                        className="text-xs text-neutral-600 cursor-pointer flex items-center gap-1 px-2 py-1 rounded border border-neutral-200 hover:bg-white"
+                        className="text-xs text-neutral-600 cursor-pointer flex items-center gap-1 px-2 py-1 rounded border border-neutral-200 hover:bg-white transition-colors"
                       >
                         <Upload size={12} />
-                        {section.audio_url ? 'Replace Audio' : 'Upload Audio'}
+                        {section.audio_url ? 'Replace audio' : 'Upload audio'}
                       </label>
                       {audioFiles[section.id] && (
-                        <Button size="sm" onClick={() => uploadAudio(section.id)} className="h-7 text-xs px-2">
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          loading={audioUploading === section.id}
+                          onClick={() => uploadAudio(section.id)}
+                        >
                           Save
                         </Button>
                       )}
                       {section.audio_url && !audioFiles[section.id] && (
-                        <span className="text-xs text-emerald-600">Audio uploaded</span>
+                        <span className="text-xs text-emerald-600">✓ Audio ready</span>
                       )}
                     </div>
                   )}
-                  <span className="text-xs text-neutral-400">{section.questions.length} questions</span>
+                  <span className="text-xs text-neutral-400">
+                    {section.questions.length} question{section.questions.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
 
-              <div className="divide-y divide-neutral-100">
-                {section.questions.map((question) => (
-                  <div key={question.id} className="px-5 py-3 flex items-start gap-3">
-                    <span className="text-xs font-mono text-neutral-400 pt-0.5 flex-shrink-0 w-6">
-                      {question.order_num}.
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-neutral-800">{question.question_text}</p>
-                      <p className="text-xs text-emerald-600 mt-1">Answer: {question.correct_answer}</p>
+              {/* Questions list */}
+              {section.questions.length === 0 ? (
+                <div className="px-5 py-4 text-sm text-neutral-400 italic">
+                  No questions yet — add one below.
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-100">
+                  {section.questions.map((question) => (
+                    <div key={question.id} className="px-5 py-3 flex items-start gap-3">
+                      <span className="text-xs font-mono text-neutral-400 pt-0.5 flex-shrink-0 w-6">
+                        {question.order_num}.
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-neutral-800">{question.question_text}</p>
+                        <p className="text-xs text-emerald-600 mt-0.5">Answer: {question.correct_answer}</p>
+                      </div>
+                      <Badge className="flex-shrink-0 text-xs">
+                        {question.type.replace(/_/g, ' ')}
+                      </Badge>
                     </div>
-                    <Badge className="flex-shrink-0 text-xs">{question.type.replace('_', ' ')}</Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              <div className="px-5 py-3 border-t border-neutral-100">
+              {/* Add question */}
+              <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/50">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowAddQuestion(section.id)}
-                  className="text-xs"
+                  className="text-xs text-neutral-600"
                 >
                   <Plus size={14} className="mr-1" /> Add Question
                 </Button>
@@ -242,7 +381,128 @@ export default function EditTestPage({ params }: EditTestPageProps) {
         </div>
       )}
 
-      {/* Add Question Modal */}
+      {/* ────────────────────────────────────────────────────────────
+          SETTINGS MODAL
+      ──────────────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        title="Test Settings"
+        size="lg"
+      >
+        <div className="space-y-6">
+          {/* ── Metadata ── */}
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-700 mb-3">Test Info</h3>
+            <div className="space-y-3">
+              <Input
+                label="Title"
+                value={settingsTitle}
+                onChange={(e) => setSettingsTitle(e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  label="Type"
+                  value={settingsType}
+                  onChange={(e) => setSettingsType(e.target.value as 'listening' | 'reading')}
+                >
+                  <option value="listening">Listening</option>
+                  <option value="reading">Reading</option>
+                </Select>
+                <Select
+                  label="Difficulty"
+                  value={settingsDifficulty}
+                  onChange={(e) => setSettingsDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')}
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </Select>
+              </div>
+              <Input
+                label="Time Limit (minutes)"
+                type="number"
+                value={settingsTimeLimit}
+                onChange={(e) => setSettingsTimeLimit(parseInt(e.target.value) || 60)}
+                min={1}
+                max={240}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={saveSettings}
+                loading={settingsSaving}
+              >
+                <Save size={14} className="mr-1.5" /> Save Changes
+              </Button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-neutral-200" />
+
+          {/* ── Existing sections ── */}
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-700 mb-3">
+              Sections ({test.sections.length})
+            </h3>
+
+            {test.sections.length === 0 ? (
+              <p className="text-sm text-neutral-400">No sections yet. Add one below.</p>
+            ) : (
+              <div className="space-y-1.5 mb-3">
+                {test.sections.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-neutral-50 border border-neutral-200"
+                  >
+                    <span className="text-sm text-neutral-800">
+                      {s.title || `Section ${s.order_num}`}
+                    </span>
+                    <span className="text-xs text-neutral-400">
+                      {s.questions.length} question{s.questions.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add section form */}
+            <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-medium text-neutral-700">Add New Section</p>
+              <Input
+                label="Section Title"
+                value={newSectionTitle}
+                onChange={(e) => setNewSectionTitle(e.target.value)}
+                placeholder={`e.g., Section ${test.sections.length + 1} or Passage A`}
+              />
+              <Textarea
+                label="Instructions (optional)"
+                value={newSectionInstructions}
+                onChange={(e) => setNewSectionInstructions(e.target.value)}
+                placeholder="Instructions shown to students before this section…"
+              />
+              {sectionError && (
+                <p className="text-xs text-red-600">{sectionError}</p>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={addSection}
+                loading={addingSect}
+                disabled={addingSect}
+              >
+                <Plus size={14} className="mr-1.5" /> Add Section
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ────────────────────────────────────────────────────────────
+          ADD QUESTION MODAL
+      ──────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={!!showAddQuestion}
         onClose={() => setShowAddQuestion(null)}
@@ -255,7 +515,7 @@ export default function EditTestPage({ params }: EditTestPageProps) {
             initialOrderNum={
               (test.sections.find((s) => s.id === showAddQuestion)?.questions.length ?? 0) + 1
             }
-            onSave={(q) => handleAddQuestion(showAddQuestion, q as unknown as Record<string, unknown>)}
+            onSave={(q) => handleAddQuestion(showAddQuestion, q)}
             onCancel={() => setShowAddQuestion(null)}
           />
         )}

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { GraduationCap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -16,9 +17,16 @@ function GoogleIcon() {
   )
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+
+  // Pick up any error message forwarded back from /auth/callback
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    if (urlError) setError(decodeURIComponent(urlError))
+  }, [searchParams])
 
   const handleGoogleLogin = async () => {
     setLoading(true)
@@ -84,5 +92,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

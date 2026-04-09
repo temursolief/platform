@@ -11,12 +11,56 @@ interface FillBlankProps {
   isCorrect?: boolean
 }
 
+/**
+ * FillBlank handles three answer modes:
+ *  1. Word-bank dropdown   — when the question has options[] in the DB (summary/sentence completion with word box)
+ *  2. Inline blank input   — when question_text contains ___ or [...] markers
+ *  3. Standalone text input — fallback (short answer, diagram label, etc.)
+ */
 export function FillBlank({ question, value, onChange, showResult, isCorrect }: FillBlankProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const hasWordBank = (question.options?.length ?? 0) > 0
 
-  // Parse question text — replace ___ or [...] with input
+  const resultClass = showResult
+    ? isCorrect
+      ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+      : 'border-red-400 bg-red-50 text-red-800'
+    : ''
+
+  // ── Mode 1: Word-bank dropdown ─────────────────────────────────────────────
+  if (hasWordBank) {
+    return (
+      <div>
+        <select
+          value={value}
+          onChange={(e) => !showResult && onChange(e.target.value)}
+          disabled={showResult}
+          className={`w-full h-10 px-3 rounded-lg border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-900 appearance-none bg-white ${
+            showResult
+              ? isCorrect
+                ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                : 'border-red-400 bg-red-50 text-red-800'
+              : 'border-neutral-200 hover:border-neutral-300 cursor-pointer'
+          }`}
+        >
+          <option value="">— Choose a word —</option>
+          {question.options!.map((opt) => (
+            <option key={opt.id} value={opt.option_text}>
+              {opt.option_text}
+            </option>
+          ))}
+        </select>
+        {showResult && !isCorrect && (
+          <p className="text-xs text-emerald-600 mt-1">
+            Correct answer: {question.correct_answer}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  // ── Mode 2: Inline blank in question text ──────────────────────────────────
   const parts = question.question_text.split(/(_+|\[\.{3}\]|\[___\])/)
-
   const hasBlankInText = parts.length > 1
 
   if (hasBlankInText) {
@@ -54,6 +98,7 @@ export function FillBlank({ question, value, onChange, showResult, isCorrect }: 
     )
   }
 
+  // ── Mode 3: Standalone text input ─────────────────────────────────────────
   return (
     <div>
       <input
@@ -62,13 +107,9 @@ export function FillBlank({ question, value, onChange, showResult, isCorrect }: 
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={showResult}
-        placeholder="Type your answer..."
+        placeholder="Type your answer…"
         className={`w-full h-10 px-3 rounded-lg border text-sm font-mono transition-colors focus:outline-none focus:ring-2 focus:ring-neutral-900 ${
-          showResult
-            ? isCorrect
-              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
-              : 'border-red-400 bg-red-50 text-red-800'
-            : 'border-neutral-200 bg-white'
+          resultClass || 'border-neutral-200 bg-white'
         }`}
       />
       {showResult && !isCorrect && (

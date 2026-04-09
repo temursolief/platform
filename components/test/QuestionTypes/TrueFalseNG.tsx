@@ -9,16 +9,24 @@ interface TrueFalseNGProps {
   showResult?: boolean
 }
 
-const OPTIONS = [
+const TFNG_OPTIONS = [
   { label: 'True', value: 'True' },
   { label: 'False', value: 'False' },
   { label: 'Not Given', value: 'Not Given' },
 ]
 
+const YNNG_OPTIONS = [
+  { label: 'Yes', value: 'Yes' },
+  { label: 'No', value: 'No' },
+  { label: 'Not Given', value: 'Not Given' },
+]
+
 export function TrueFalseNG({ question, value, onChange, showResult }: TrueFalseNGProps) {
+  const options = question.type === 'yes_no_ng' ? YNNG_OPTIONS : TFNG_OPTIONS
+
   return (
     <div className="flex flex-wrap gap-2">
-      {OPTIONS.map((option) => {
+      {options.map((option) => {
         const isSelected = value === option.value
         const isCorrect = showResult && question.correct_answer === option.value
         const isWrong = showResult && isSelected && question.correct_answer !== option.value

@@ -1,13 +1,12 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { QuestionCard } from '@/components/test/QuestionCard'
+import { Card } from '@/components/ui/card'
 import { getBandDescriptor, getBandColor } from '@/lib/scoring/band-tables'
 import { formatBandScore, formatScore } from '@/lib/utils/format'
 import { formatDuration } from '@/lib/utils/time'
-import { CheckCircle2, XCircle, Clock, ChevronRight } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
+import { ResultReview } from './ResultReview'
 import type { Question } from '@/lib/types'
 
 interface PageProps {
@@ -47,8 +46,6 @@ export default async function ResultPage({ params, searchParams }: PageProps) {
     .from('answers')
     .select('*')
     .eq('attempt_id', attemptId)
-
-  const answersMap = new Map(answers?.map((a) => [a.question_id, a]) ?? [])
 
   // Sort sections + questions
   test.sections = test.sections
@@ -114,44 +111,7 @@ export default async function ResultPage({ params, searchParams }: PageProps) {
       </div>
 
       {/* Answer Review */}
-      <div className="space-y-6">
-        {test.sections.map((section: { id: string; title: string; order_num: number; questions: Question[] }) => (
-          <Card key={section.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>{section.title || `Section ${section.order_num}`}</CardTitle>
-                <div className="flex gap-3 text-sm">
-                  <span className="flex items-center gap-1 text-emerald-600">
-                    <CheckCircle2 size={14} />
-                    {section.questions.filter((q) => answersMap.get(q.id)?.is_correct).length} correct
-                  </span>
-                  <span className="flex items-center gap-1 text-red-600">
-                    <XCircle size={14} />
-                    {section.questions.filter((q) => !answersMap.get(q.id)?.is_correct).length} wrong
-                  </span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {section.questions.map((question) => {
-                  const ans = answersMap.get(question.id)
-                  return (
-                    <QuestionCard
-                      key={question.id}
-                      question={question}
-                      value={ans?.given_answer || ''}
-                      onChange={() => {}}
-                      showResult={true}
-                      isCorrect={ans?.is_correct ?? false}
-                    />
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <ResultReview sections={test.sections} answers={answers ?? []} />
 
       {/* Actions */}
       <div className="mt-8 flex gap-4">

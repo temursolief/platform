@@ -12,22 +12,28 @@ export default async function TestPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Fetch the test with all sections and questions
-  const { data: test } = await supabase
-    .from('tests')
-    .select(`
-      *,
-      sections (
-        *,
-        questions (
-          *,
-          options (*)
-        )
-      )
-    `)
-    .eq('id', testId)
-    .eq('is_published', true)
+  // Fetch user profile to check role
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
     .single()
+
+  const isTeacher = profile?.role === 'teacher' || profile?.role === 'admin'
+
+  // Teachers can preview their own tests (even unpublished); students need is_published
+  let testQuery = supabase
+    .from('tests')
+    .select(`*, sections(*, questions(*, options(*)))`)
+    .eq('id', testId)
+
+  if (isTeacher) {
+    testQuery = testQuery.eq('teacher_id', user.id) as typeof testQuery
+  } else {
+    testQuery = testQuery.eq('is_published', true) as typeof testQuery
+  }
+
+  const { data: test } = await testQuery.single()
 
   if (!test) notFound()
 

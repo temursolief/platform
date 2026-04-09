@@ -4,16 +4,43 @@ export type TestType = 'listening' | 'reading'
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced'
 
+// Reading question types
+// matching_headings        — match headings to text sections
+// true_false_ng            — True / False / Not Given (writer's views/claims)
+// yes_no_ng                — Yes / No / Not Given (factual information)
+// multiple_choice          — standard A-D (or A-C) MC
+// summary_completion       — fill blanks in a summary
+// matching_information     — match information to paragraphs (A, B, C…)
+// matching_features        — match features to a list of people/things
+// matching_sentence_endings — match sentence halves from two lists
+// sentence_completion      — complete sentences with words from passage
+// note_table_flowchart_completion — notes / table / flow-chart / form blanks
+// diagram_label            — label a diagram (Reading & Listening)
+// short_answer             — free-text, word-limit answer
+// Listening question types (overlap with Reading + extras)
+// matching                 — generic listening match (answer from a list)
+// list_selection           — select from a printed list (A-H style)
+// Legacy / general
+// fill_blank               — kept for backward compatibility
 export type QuestionType =
+  // Reading
   | 'multiple_choice'
   | 'true_false_ng'
-  | 'matching'
-  | 'fill_blank'
-  | 'short_answer'
+  | 'yes_no_ng'
+  | 'matching_headings'
+  | 'matching_information'
+  | 'matching_features'
+  | 'matching_sentence_endings'
   | 'sentence_completion'
-  | 'diagram_label'
   | 'summary_completion'
+  | 'note_table_flowchart_completion'
+  | 'diagram_label'
+  | 'short_answer'
+  // Listening / shared
+  | 'matching'
   | 'list_selection'
+  // Legacy
+  | 'fill_blank'
 
 export interface User {
   id: string
@@ -59,6 +86,8 @@ export interface Question {
   question_text: string
   correct_answer: string
   acceptable_answers: string[] | null
+  /** URL of an image shown with this question (diagram, map, plan, etc.) */
+  image_url: string | null
   points: number
   hint: string | null
   created_at: string
