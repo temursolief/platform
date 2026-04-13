@@ -1,86 +1,229 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens ─────────────────────────────────────────────────────── */
 :root {
-  /* Neutral Base */
-  --color-bg: #FFFFFF;
-  --color-bg-secondary: #F9FAFB;
-  --color-bg-tertiary: #F3F4F6;
-
-  /* Text */
-  --color-text-primary: #111827;
-  --color-text-secondary: #4B5563;
-  --color-text-muted: #9CA3AF;
-
-  /* Borders */
-  --color-border: #E5E7EB;
-  --color-border-focus: #111827;
-
-  /* Accent */
-  --color-primary: #111827;
-  --color-primary-hover: #1F2937;
-
-  /* Status Colors */
-  --color-success: #059669;
-  --color-error: #DC2626;
-  --color-warning: #D97706;
-  --color-info: #2563EB;
-
-  /* Progress Indicators */
-  --color-answered: #111827;
-  --color-unanswered: #E5E7EB;
-  --color-current: #2563EB;
-
+  --bg: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --border-focus: #111827;
+  --primary: #111827;
+  --primary-hover: #1f2937;
+  --success: #059669;
+  --error: #dc2626;
+  --warning: #d97706;
+  --info: #2563eb;
+  --answered: #111827;
+  --unanswered: #e5e7eb;
+  --current: #2563eb;
   --background: #ffffff;
   --foreground: #111827;
 }
 
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+  line-height: 1.5;
 }
 
-/* Reading passage text */
+/* ─── Text Selection (user can highlight) ────────────────────────────────── */
+::selection {
+  background-color: #fde68a;
+  color: #111827;
+}
+
+/* ─── Persistent Highlight Marks ─────────────────────────────────────────── */
+mark.hl-yellow {
+  background: #fef08a;
+  color: inherit;
+  border-radius: 2px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+mark.hl-yellow:hover { background: #fde047; }
+
+mark.hl-green {
+  background: #bbf7d0;
+  color: inherit;
+  border-radius: 2px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+mark.hl-green:hover { background: #86efac; }
+
+mark.hl-blue {
+  background: #bfdbfe;
+  color: inherit;
+  border-radius: 2px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+mark.hl-blue:hover { background: #93c5fd; }
+
+mark.hl-pink {
+  background: #fecdd3;
+  color: inherit;
+  border-radius: 2px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+mark.hl-pink:hover { background: #fda4af; }
+
+/* ─── Reading Passage ─────────────────────────────────────────────────────── */
 .passage-text {
-  font-size: 1.125rem;
-  line-height: 1.8;
-}
-
-/* Question text */
-.question-text {
   font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.85;
+  color: #1f2937;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
-/* Fill in the blank inputs */
+.passage-text p {
+  margin-bottom: 1.4em;
+}
+
+.passage-text p:last-child {
+  margin-bottom: 0;
+}
+
+.passage-text h1,
+.passage-text h2,
+.passage-text h3 {
+  font-weight: 700;
+  color: #111827;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  line-height: 1.3;
+}
+
+.passage-text h1 { font-size: 1.25em; }
+.passage-text h2 { font-size: 1.125em; }
+.passage-text h3 { font-size: 1em; }
+
+.passage-text ul,
+.passage-text ol {
+  margin: 0.75em 0 1em 1.5em;
+}
+
+.passage-text li {
+  margin-bottom: 0.35em;
+}
+
+.passage-text strong { font-weight: 600; }
+.passage-text em { font-style: italic; }
+
+.passage-text blockquote {
+  border-left: 3px solid #e5e7eb;
+  margin: 1em 0;
+  padding: 0.5em 0 0.5em 1em;
+  color: #4b5563;
+  font-style: italic;
+}
+
+/* ─── Question Text ───────────────────────────────────────────────────────── */
+.question-text {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ─── Fill-in-Blank Input ─────────────────────────────────────────────────── */
 .blank-input {
-  font-family: 'Menlo', monospace;
-  border-bottom: 2px solid var(--color-border);
-  padding: 0.25rem 0.5rem;
+  font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+  border-bottom: 2px solid #d1d5db;
+  padding: 2px 6px;
   background: transparent;
   outline: none;
+  transition: border-color 0.15s;
+  min-width: 120px;
 }
 
 .blank-input:focus {
-  border-bottom-color: var(--color-border-focus);
+  border-bottom-color: #111827;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ─── Drag-and-Drop Word Tiles ────────────────────────────────────────────── */
+.word-tile {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1.5px solid #d1d5db;
+  background: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: grab;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s, transform 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.word-tile:hover {
+  border-color: #6b7280;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+.word-tile:active {
+  cursor: grabbing;
+  transform: scale(0.97);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+.word-tile.dragging {
+  opacity: 0.4;
+  pointer-events: none;
 }
+
+.word-tile.used {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.drop-zone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  height: 28px;
+  border-radius: 5px;
+  border: 1.5px dashed #9ca3af;
+  background: #f9fafb;
+  font-size: 0.875rem;
+  color: #6b7280;
+  transition: border-color 0.15s, background 0.15s;
+  padding: 0 8px;
+  vertical-align: middle;
+}
+
+.drop-zone.drag-over {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.drop-zone.filled {
+  border-style: solid;
+  border-color: #111827;
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 500;
+}
+
+/* ─── Scrollbars ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }

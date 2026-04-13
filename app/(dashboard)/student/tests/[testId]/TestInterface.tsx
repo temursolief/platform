@@ -55,9 +55,27 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
   useEffect(() => {
     if (!started) return
 
-    // Request fullscreen
-    const el = document.documentElement
-    el.requestFullscreen?.().catch(() => {})
+    // Enter fullscreen immediately
+    document.documentElement.requestFullscreen?.().catch(() => {})
+
+    // Re-enter fullscreen whenever it's exited (Esc or other means)
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        // Small delay so browser's own exit animation completes
+        setTimeout(() => {
+          document.documentElement.requestFullscreen?.().catch(() => {})
+        }, 80)
+      }
+    }
+
+    // Prevent Escape from being processed by the browser in fullscreen
+    // (capture phase runs before browser's fullscreen handler in supported browsers)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+      }
+    }
 
     // Warn on tab/window switch
     const handleVisibilityChange = () => {
@@ -73,10 +91,14 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
       e.returnValue = ''
     }
 
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('keydown', handleKeyDown, true) // capture phase
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('keydown', handleKeyDown, true)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', handleBeforeUnload)
       document.exitFullscreen?.().catch(() => {})
@@ -275,6 +297,7 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
                     value={answers[question.id] || ''}
                     onChange={(val) => setAnswer(question.id, val)}
                     matchOptions={question.options?.map((o) => o.option_text) ?? []}
+                    allAnswers={answers}
                   />
                 ))}
               </div>

@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Prevents loading all route modules into memory at startup.
+    // On Node.js v22+ + Turbopack this triggers a native allocator crash
+    // ("memory allocation of N bytes failed") — disabling it fixes it.
+    preloadEntriesOnStart: false,
+    // Reduce webpack memory footprint (active when running --no-turbopack)
+    webpackMemoryOptimizations: true,
+  },
+
   async headers() {
     return [
       {

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { Sidebar } from '@/components/dashboard/Sidebar'
+import { ExamLayout } from '@/components/layout/ExamLayout'
 
 export default async function DashboardLayout({
   children,
@@ -9,17 +9,14 @@ export default async function DashboardLayout({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  if (!user) {
-    redirect('/login')
-  }
+  // Fetch profile server-side — passed to Sidebar so there's no client-side waterfall
+  const { data: profile } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single()
 
-  return (
-    <div className="flex h-screen bg-neutral-50">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
-  )
+  return <ExamLayout profile={profile}>{children}</ExamLayout>
 }
