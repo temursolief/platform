@@ -24,6 +24,7 @@ export default async function StudentTestsPage() {
     .select('test_id, band_score, raw_score, total_questions, submitted_at')
     .eq('student_id', user.id)
     .eq('is_completed', true)
+    .limit(200)
 
   const attemptMap = new Map(attempts?.map((a) => [a.test_id, a]) ?? [])
 

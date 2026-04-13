@@ -54,20 +54,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
   }
 
-  const { title, type, difficulty, time_limit_minutes, sections = [], manual = false } = body as {
+  const { title, type, difficulty, time_limit_minutes, sections = [], manual = false, is_published = false } = body as {
     title: string
-    type: string
+    type?: string
     difficulty?: string
     time_limit_minutes?: number
     sections: RawSection[]
     manual?: boolean
+    is_published?: boolean
   }
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'title is required.' }, { status: 400 })
   }
-  if (!type || !['listening', 'reading'].includes(type)) {
-    return NextResponse.json({ error: 'type must be "listening" or "reading".' }, { status: 400 })
+  if (type && type !== 'reading') {
+    return NextResponse.json({ error: 'type must be "reading".' }, { status: 400 })
   }
 
   // Count total questions upfront
@@ -82,11 +83,11 @@ export async function POST(request: Request) {
     .insert({
       teacher_id: user.id,
       title: title.trim(),
-      type,
+      type: 'reading',
       difficulty: difficulty ?? 'intermediate',
       time_limit_minutes: time_limit_minutes ?? 60,
       total_questions: totalQuestions || 0,
-      is_published: false,
+      is_published: is_published ?? false,
     })
     .select()
     .single()
@@ -220,21 +221,11 @@ export async function POST(request: Request) {
     }
   }
 
-  // Re-fetch complete test
-  const { data: fullTest } = await supabase
-    .from('tests')
-    .select('*, sections(*, questions(*, options(*)))')
-    .eq('id', test.id)
-    .single()
-
   if (errors.length > 0) {
-    return NextResponse.json({
-      test: fullTest ?? test,
-      warnings: errors,
-    })
+    return NextResponse.json({ test, warnings: errors })
   }
 
-  return NextResponse.json({ test: fullTest ?? test })
+  return NextResponse.json({ test })
 }
 
 // ---------------------------------------------------------------------------

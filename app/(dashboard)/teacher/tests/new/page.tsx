@@ -18,7 +18,6 @@ export default function NewTestPage() {
 
   // Manual form state
   const [title, setTitle] = useState('')
-  const [type, setType] = useState<'listening' | 'reading'>('listening')
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
   const [timeLimit, setTimeLimit] = useState(60)
   const [instructions, setInstructions] = useState('')
@@ -35,7 +34,7 @@ export default function NewTestPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
-          type,
+          type: 'reading',
           difficulty,
           time_limit_minutes: timeLimit,
           sections: [],
@@ -101,7 +100,15 @@ export default function NewTestPage() {
           >
             <ChevronLeft size={16} /> Back
           </button>
-          <TestUploadForm onSuccess={(id) => router.push(`/teacher/tests/${id}`)} />
+          <TestUploadForm
+            onSuccess={({ testIds, mode }) => {
+              if (mode === 'test' && testIds[0]) {
+                router.push(`/teacher/tests/${testIds[0]}`)
+              } else {
+                router.push('/teacher/tests')
+              }
+            }}
+          />
         </div>
       )}
 
@@ -119,23 +126,17 @@ export default function NewTestPage() {
               label="Test Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Cambridge IELTS 18 — Test 1 — Listening"
+              placeholder="e.g., Cambridge IELTS 18 — Test 1 — Reading"
             />
-            <div className="grid grid-cols-2 gap-4">
-              <Select label="Type" value={type} onChange={(e) => setType(e.target.value as 'listening' | 'reading')}>
-                <option value="listening">Listening</option>
-                <option value="reading">Reading</option>
-              </Select>
-              <Select
-                label="Difficulty"
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')}
-              >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </Select>
-            </div>
+            <Select
+              label="Difficulty"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')}
+            >
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </Select>
             <Input
               label="Time Limit (minutes)"
               type="number"

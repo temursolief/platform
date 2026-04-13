@@ -13,6 +13,7 @@ export async function GET(_request: Request) {
     .eq('student_id', user.id)
     .eq('is_completed', true)
     .order('submitted_at', { ascending: false })
+    .limit(100)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ attempts })

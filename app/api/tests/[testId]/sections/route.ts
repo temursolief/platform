@@ -12,31 +12,29 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: test } = await supabase
-    .from('tests')
-    .select('teacher_id')
-    .eq('id', testId)
-    .single()
+  // Ownership check and section count run in parallel — both only need test_id
+  const [{ data: test }, { count }] = await Promise.all([
+    supabase.from('tests').select('teacher_id').eq('id', testId).single(),
+    supabase
+      .from('sections')
+      .select('id', { count: 'exact', head: true })
+      .eq('test_id', testId),
+  ])
 
   if (!test || test.teacher_id !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // Find the next order_num
-  const { count } = await supabase
-    .from('sections')
-    .select('id', { count: 'exact', head: true })
-    .eq('test_id', testId)
-
   const body = await request.json()
   const { title, instructions, passage_html } = body
+  const nextOrder = (count ?? 0) + 1
 
   const { data: section, error } = await supabase
     .from('sections')
     .insert({
       test_id: testId,
-      order_num: (count ?? 0) + 1,
-      title: title || `Section ${(count ?? 0) + 1}`,
+      order_num: nextOrder,
+      title: title || `Section ${nextOrder}`,
       instructions: instructions || null,
       passage_html: passage_html || null,
     })
@@ -45,6 +43,5 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Attach an empty questions array so the UI doesn't need to handle undefined
   return NextResponse.json({ section: { ...section, questions: [] } })
 }

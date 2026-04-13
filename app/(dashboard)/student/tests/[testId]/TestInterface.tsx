@@ -9,7 +9,6 @@ import { useTimer } from '@/hooks/useTimer'
 import { TimerDisplay } from '@/components/ui/timer'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
-import { AudioPlayer } from '@/components/test/AudioPlayer'
 import { PassageViewer } from '@/components/test/PassageViewer'
 import { QuestionCard } from '@/components/test/QuestionCard'
 import { AnswerSheet } from '@/components/test/AnswerSheet'
@@ -170,7 +169,6 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
                 <p className="font-medium">Before you start:</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>You have {test.time_limit_minutes} minutes total</li>
-                  {test.type === 'listening' && <li>Audio can only be played once</li>}
                   <li>Answer all questions before the timer runs out</li>
                   <li>The page will enter fullscreen — do not leave the tab</li>
                   <li>Switching tabs or windows is recorded</li>
@@ -188,9 +186,6 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
       </div>
     )
   }
-
-  const isListening = test.type === 'listening'
-  const isReading = test.type === 'reading'
 
   return (
     <div ref={containerRef} className="h-screen flex flex-col bg-white overflow-hidden">
@@ -273,40 +268,8 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
       {/* ── Body ────────────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-hidden flex">
 
-        {/* Listening layout */}
-        {isListening && currentSection && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {currentSection.audio_url && (
-              <div className="px-6 pt-4 flex-shrink-0">
-                <AudioPlayer src={currentSection.audio_url} allowReplay={false} />
-              </div>
-            )}
-            {currentSection.instructions && (
-              <div className="px-6 pt-3 flex-shrink-0">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                  {currentSection.instructions}
-                </div>
-              </div>
-            )}
-            <div className="flex-1 overflow-y-auto">
-              <div className="px-6 py-4 space-y-4">
-                {currentSection.questions.map((question) => (
-                  <QuestionCard
-                    key={question.id}
-                    question={question}
-                    value={answers[question.id] || ''}
-                    onChange={(val) => setAnswer(question.id, val)}
-                    matchOptions={question.options?.map((o) => o.option_text) ?? []}
-                    allAnswers={answers}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Reading layout — split passage | questions */}
-        {isReading && currentSection && (
+        {currentSection && (
           <div className="flex-1 flex overflow-hidden">
             <div className="w-1/2 border-r border-neutral-200 overflow-hidden flex flex-col">
               <PassageViewer

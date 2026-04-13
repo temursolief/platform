@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Plus, Trash2, Eye, EyeOff, Upload, Settings, Save } from 'lucide-react'
+import { ChevronLeft, Plus, Trash2, Eye, EyeOff, Settings, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { Badge } from '@/components/ui/badge'
@@ -29,13 +29,8 @@ export default function EditTestPage({ params }: EditTestPageProps) {
   const [showAddQuestion, setShowAddQuestion] = useState<string | null>(null) // sectionId
   const [showSettings, setShowSettings] = useState(false)
 
-  // Audio upload state
-  const [audioFiles, setAudioFiles] = useState<Record<string, File>>({})
-  const [audioUploading, setAudioUploading] = useState<string | null>(null)
-
   // Settings form state (initialised when modal opens)
   const [settingsTitle, setSettingsTitle] = useState('')
-  const [settingsType, setSettingsType] = useState<'listening' | 'reading'>('listening')
   const [settingsDifficulty, setSettingsDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('intermediate')
   const [settingsTimeLimit, setSettingsTimeLimit] = useState(60)
   const [settingsSaving, setSettingsSaving] = useState(false)
@@ -62,7 +57,6 @@ export default function EditTestPage({ params }: EditTestPageProps) {
   const openSettings = () => {
     if (!test) return
     setSettingsTitle(test.title)
-    setSettingsType(test.type)
     setSettingsDifficulty(test.difficulty)
     setSettingsTimeLimit(test.time_limit_minutes)
     setNewSectionTitle('')
@@ -80,7 +74,6 @@ export default function EditTestPage({ params }: EditTestPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: settingsTitle.trim(),
-          type: settingsType,
           difficulty: settingsDifficulty,
           time_limit_minutes: settingsTimeLimit,
         }),
@@ -178,42 +171,6 @@ export default function EditTestPage({ params }: EditTestPageProps) {
     setShowAddQuestion(null)
   }
 
-  // -------------------------------------------------------------------------
-  // Audio upload
-  // -------------------------------------------------------------------------
-  const uploadAudio = async (sectionId: string) => {
-    const file = audioFiles[sectionId]
-    if (!file) return
-    setAudioUploading(sectionId)
-    setError(null)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('testId', testId)
-      formData.append('type', 'audio')
-
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d.error ?? 'Upload failed.')
-      }
-      const { url } = await res.json()
-
-      await fetch(`/api/tests/${testId}/sections/${sectionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio_url: url }),
-      })
-      setTest((t) =>
-        t ? { ...t, sections: t.sections.map((s) => s.id === sectionId ? { ...s, audio_url: url } : s) } : t
-      )
-      setAudioFiles((p) => { const next = { ...p }; delete next[sectionId]; return next })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed.')
-    } finally {
-      setAudioUploading(null)
-    }
-  }
 
   // -------------------------------------------------------------------------
   // Render
@@ -246,7 +203,7 @@ export default function EditTestPage({ params }: EditTestPageProps) {
           <div>
             <h1 className="text-2xl font-bold text-neutral-900">{test.title}</h1>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <Badge variant={test.type === 'listening' ? 'listening' : 'reading'}>{test.type}</Badge>
+              <Badge variant="reading">{test.type}</Badge>
               <Badge>{test.difficulty}</Badge>
               <Badge variant={test.is_published ? 'success' : 'default'}>
                 {test.is_published ? 'Published' : 'Draft'}
@@ -301,40 +258,6 @@ export default function EditTestPage({ params }: EditTestPageProps) {
                   {section.title || `Section ${section.order_num}`}
                 </h3>
                 <div className="flex items-center gap-3">
-                  {test.type === 'listening' && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        id={`audio-${section.id}`}
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0]
-                          if (f) setAudioFiles((p) => ({ ...p, [section.id]: f }))
-                        }}
-                      />
-                      <label
-                        htmlFor={`audio-${section.id}`}
-                        className="text-xs text-neutral-600 cursor-pointer flex items-center gap-1 px-2 py-1 rounded border border-neutral-200 hover:bg-white transition-colors"
-                      >
-                        <Upload size={12} />
-                        {section.audio_url ? 'Replace audio' : 'Upload audio'}
-                      </label>
-                      {audioFiles[section.id] && (
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs px-2"
-                          loading={audioUploading === section.id}
-                          onClick={() => uploadAudio(section.id)}
-                        >
-                          Save
-                        </Button>
-                      )}
-                      {section.audio_url && !audioFiles[section.id] && (
-                        <span className="text-xs text-emerald-600">✓ Audio ready</span>
-                      )}
-                    </div>
-                  )}
                   <span className="text-xs text-neutral-400">
                     {section.questions.length} question{section.questions.length !== 1 ? 's' : ''}
                   </span>
@@ -400,25 +323,15 @@ export default function EditTestPage({ params }: EditTestPageProps) {
                 value={settingsTitle}
                 onChange={(e) => setSettingsTitle(e.target.value)}
               />
-              <div className="grid grid-cols-2 gap-3">
-                <Select
-                  label="Type"
-                  value={settingsType}
-                  onChange={(e) => setSettingsType(e.target.value as 'listening' | 'reading')}
-                >
-                  <option value="listening">Listening</option>
-                  <option value="reading">Reading</option>
-                </Select>
-                <Select
-                  label="Difficulty"
-                  value={settingsDifficulty}
-                  onChange={(e) => setSettingsDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')}
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </Select>
-              </div>
+              <Select
+                label="Difficulty"
+                value={settingsDifficulty}
+                onChange={(e) => setSettingsDifficulty(e.target.value as 'beginner' | 'intermediate' | 'advanced')}
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </Select>
               <Input
                 label="Time Limit (minutes)"
                 type="number"

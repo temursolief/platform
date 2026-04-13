@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { GraduationCap, Headphones, BookOpen, BarChart2, Clock, CheckCircle2 } from 'lucide-react'
+import { GraduationCap, BookOpen, BarChart2, Clock, CheckCircle2, FileText } from 'lucide-react'
 
 export default function LandingPage() {
   return (
@@ -54,14 +54,14 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             {
-              icon: <Headphones size={24} />,
-              title: 'Listening Tests',
-              desc: 'Full-length listening tests with authentic audio. One-play mode for real exam simulation.',
+              icon: <FileText size={24} />,
+              title: 'Practice Passages',
+              desc: 'Standalone reading passages published instantly for students to practise at their own pace.',
             },
             {
               icon: <BookOpen size={24} />,
               title: 'Reading Tests',
-              desc: 'Academic and General Training passages with all question types: MCQ, T/F/NG, matching, and more.',
+              desc: 'Academic passages with all IELTS question types: MCQ, T/F/NG, matching, sentence completion, and more.',
             },
             {
               icon: <BarChart2 size={24} />,

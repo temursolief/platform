@@ -12,30 +12,30 @@ export default async function TeacherDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role, full_name')
-    .eq('id', user.id)
-    .single()
+  // Profile and tests are independent — fetch in parallel
+  const [{ data: profile }, { data: tests }] = await Promise.all([
+    supabase.from('users').select('role, full_name').eq('id', user.id).single(),
+    supabase
+      .from('tests')
+      .select('id, title, type, is_published, created_at, total_questions')
+      .eq('teacher_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100),
+  ])
 
   if (profile?.role === 'student') redirect('/student')
 
-  // Fetch teacher's tests
-  const { data: tests } = await supabase
-    .from('tests')
-    .select('id, title, type, is_published, created_at, total_questions')
-    .eq('teacher_id', user.id)
-    .order('created_at', { ascending: false })
-
-  // Fetch recent attempts on teacher's tests
+  // Fetch recent attempts on teacher's tests (depends on test IDs from above)
   const testIds = tests?.map((t) => t.id) ?? []
-  const { data: attempts } = await supabase
-    .from('attempts')
-    .select('*, users(full_name, email)')
-    .in('test_id', testIds.length ? testIds : ['none'])
-    .eq('is_completed', true)
-    .order('submitted_at', { ascending: false })
-    .limit(20)
+  const { data: attempts } = testIds.length
+    ? await supabase
+        .from('attempts')
+        .select('id, student_id, submitted_at, band_score, users(full_name, email)')
+        .in('test_id', testIds)
+        .eq('is_completed', true)
+        .order('submitted_at', { ascending: false })
+        .limit(20)
+    : { data: [] }
 
   const publishedCount = tests?.filter((t) => t.is_published).length ?? 0
   const draftCount = (tests?.length ?? 0) - publishedCount

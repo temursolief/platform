@@ -16,10 +16,11 @@ export default async function StudentHistoryPage() {
 
   const { data: attempts } = await supabase
     .from('attempts')
-    .select('*, tests(id, title, type)')
+    .select('id, test_id, submitted_at, raw_score, total_questions, band_score, time_taken_seconds, tests(id, title, type)')
     .eq('student_id', user.id)
     .eq('is_completed', true)
     .order('submitted_at', { ascending: false })
+    .limit(100)
 
   const chartData = (attempts ?? [])
     .filter((a) => a.submitted_at && a.band_score)

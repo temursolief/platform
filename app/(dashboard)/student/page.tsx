@@ -16,7 +16,7 @@ export default async function StudentDashboard() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('*')
+    .select('full_name, role')
     .eq('id', user.id)
     .single()
 

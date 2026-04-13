@@ -19,26 +19,32 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: test } = await supabase
-    .from('tests')
-    .select('*, sections(*, questions(*))')
-    .eq('id', testId)
-    .eq('teacher_id', user.id)
-    .single()
+  // Test (ownership verified) and attempts are independent — fetch in parallel
+  const [{ data: test }, { data: attempts }] = await Promise.all([
+    supabase
+      .from('tests')
+      .select('*, sections(*, questions(*))')
+      .eq('id', testId)
+      .eq('teacher_id', user.id)
+      .single(),
+    supabase
+      .from('attempts')
+      .select('id, student_id, submitted_at, raw_score, total_questions, band_score, time_taken_seconds, users(full_name, email)')
+      .eq('test_id', testId)
+      .eq('is_completed', true)
+      .order('submitted_at', { ascending: false })
+      .limit(500),
+  ])
 
   if (!test) notFound()
 
-  const { data: attempts } = await supabase
-    .from('attempts')
-    .select('*, users(full_name, email, avatar_url)')
-    .eq('test_id', testId)
-    .eq('is_completed', true)
-    .order('submitted_at', { ascending: false })
-
-  const { data: answers } = await supabase
-    .from('answers')
-    .select('question_id, is_correct, attempt_id')
-    .in('attempt_id', (attempts ?? []).map((a) => a.id))
+  const attemptIds = (attempts ?? []).map((a) => a.id)
+  const { data: answers } = attemptIds.length
+    ? await supabase
+        .from('answers')
+        .select('question_id, is_correct, attempt_id')
+        .in('attempt_id', attemptIds)
+    : { data: [] }
 
   // Per-question stats
   const allQuestions = (test.sections ?? [])

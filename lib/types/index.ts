@@ -1,6 +1,6 @@
 export type UserRole = 'student' | 'teacher' | 'admin'
 
-export type TestType = 'listening' | 'reading'
+export type TestType = 'reading'
 
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced'
 

@@ -26,7 +26,7 @@ export function useAuth() {
       if (user) {
         const { data: profile } = await supabase
           .from('users')
-          .select('*')
+          .select('id, email, full_name, avatar_url, role, created_at, last_sign_in')
           .eq('id', user.id)
           .single()
         setState({ supabaseUser: user, profile, loading: false })

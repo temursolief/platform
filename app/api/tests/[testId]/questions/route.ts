@@ -12,16 +12,15 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Verify teacher owns this test
+  // Fold ownership verification into a single query — no pre-fetch needed
   const { data: test } = await supabase
     .from('tests')
     .select('teacher_id')
     .eq('id', testId)
+    .eq('teacher_id', user.id)
     .single()
 
-  if (!test || test.teacher_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!test) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await request.json()
   const {
@@ -74,23 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     question.options = insertedOpts ?? []
   }
 
-  // Best-effort: increment total_questions on the test
-  const { data: sectionsData } = await supabase
-    .from('sections')
-    .select('id')
-    .eq('test_id', testId)
-
-  if (sectionsData) {
-    const sectionIds = sectionsData.map((s: { id: string }) => s.id)
-    const { count } = await supabase
-      .from('questions')
-      .select('id', { count: 'exact', head: true })
-      .in('section_id', sectionIds)
-
-    if (count !== null) {
-      await supabase.from('tests').update({ total_questions: count }).eq('id', testId)
-    }
-  }
+  // total_questions is maintained automatically by the trg_sync_total_questions trigger
 
   return NextResponse.json({ question })
 }

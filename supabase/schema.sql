@@ -299,6 +299,73 @@ CREATE TRIGGER on_auth_user_created
 -- UPDATE public.users SET role = 'teacher' WHERE email = 'user@example.com';
 
 -- ============================================================
+-- MIGRATION: Performance indexes
+-- Run in Supabase SQL Editor to apply
+-- ============================================================
+
+-- Covers student history / attempts API (student_id + is_completed + ordering)
+CREATE INDEX IF NOT EXISTS idx_attempts_student_completed
+  ON public.attempts(student_id, is_completed, submitted_at DESC);
+
+-- Covers analytics + teacher dashboard (test_id + is_completed + ordering)
+CREATE INDEX IF NOT EXISTS idx_attempts_test_completed
+  ON public.attempts(test_id, is_completed, submitted_at DESC);
+
+-- Covers ordered section fetches (avoids full section scan + sort)
+CREATE INDEX IF NOT EXISTS idx_sections_test_order
+  ON public.sections(test_id, order_num);
+
+-- Covers ordered question fetches per section
+CREATE INDEX IF NOT EXISTS idx_questions_section_order
+  ON public.questions(section_id, order_num);
+
+-- Covers teacher tests list ordered by created_at
+CREATE INDEX IF NOT EXISTS idx_tests_teacher_created
+  ON public.tests(teacher_id, created_at DESC);
+
+-- Covers answers lookup by question (analytics per-question stats)
+CREATE INDEX IF NOT EXISTS idx_answers_question
+  ON public.answers(question_id);
+
+-- ============================================================
+-- TRIGGER: Auto-maintain tests.total_questions
+-- Fires after every INSERT or DELETE on questions so the app
+-- never has to do a manual count-then-update round-trip.
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.sync_total_questions()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_test_id UUID;
+BEGIN
+  -- Resolve the test_id from the affected section
+  SELECT test_id INTO v_test_id
+  FROM public.sections
+  WHERE id = COALESCE(NEW.section_id, OLD.section_id);
+
+  IF v_test_id IS NULL THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  UPDATE public.tests
+  SET total_questions = (
+    SELECT COUNT(*)
+    FROM public.questions q
+    JOIN public.sections s ON s.id = q.section_id
+    WHERE s.test_id = v_test_id
+  )
+  WHERE id = v_test_id;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_sync_total_questions ON public.questions;
+CREATE TRIGGER trg_sync_total_questions
+  AFTER INSERT OR DELETE ON public.questions
+  FOR EACH ROW EXECUTE FUNCTION public.sync_total_questions();
+
+-- ============================================================
 -- MIGRATION: Expand question type CHECK constraint
 -- Run this if the questions table already exists with the old
 -- 9-type constraint and you need to add the full IELTS type set.

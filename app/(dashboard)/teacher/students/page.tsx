@@ -10,29 +10,26 @@ export default async function TeacherStudentsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  // Profile and tests are independent — fetch in parallel
+  const [{ data: profile }, { data: tests }] = await Promise.all([
+    supabase.from('users').select('role').eq('id', user.id).single(),
+    supabase.from('tests').select('id').eq('teacher_id', user.id),
+  ])
 
   if (profile?.role === 'student') redirect('/student')
 
-  // Get all tests by this teacher
-  const { data: tests } = await supabase
-    .from('tests')
-    .select('id')
-    .eq('teacher_id', user.id)
-
   const testIds = tests?.map((t) => t.id) ?? []
 
-  // Get all completed attempts on these tests, with student info
-  const { data: attempts } = await supabase
-    .from('attempts')
-    .select('*, users(id, full_name, email, avatar_url, created_at), tests(title, type)')
-    .in('test_id', testIds.length ? testIds : ['none'])
-    .eq('is_completed', true)
-    .order('submitted_at', { ascending: false })
+  // Get completed attempts with student info (depends on testIds)
+  const { data: attempts } = testIds.length
+    ? await supabase
+        .from('attempts')
+        .select('id, student_id, submitted_at, band_score, users(id, full_name, email, created_at), tests(title, type)')
+        .in('test_id', testIds)
+        .eq('is_completed', true)
+        .order('submitted_at', { ascending: false })
+        .limit(500)
+    : { data: [] }
 
   // Group by student
   const studentMap = new Map<string, {
