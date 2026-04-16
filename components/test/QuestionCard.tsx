@@ -121,6 +121,7 @@ export function QuestionCard({
 
   return (
     <div
+      data-question-id={question.id}
       className={`p-4 rounded-xl border transition-colors ${
         showResult
           ? isCorrect

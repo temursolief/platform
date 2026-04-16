@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS public.attempts (
     total_questions INTEGER,
     band_score DECIMAL(2,1),
     time_taken_seconds INTEGER,
+    question_timings JSONB,
     is_completed BOOLEAN DEFAULT FALSE,
     UNIQUE(student_id, test_id, started_at)
 );

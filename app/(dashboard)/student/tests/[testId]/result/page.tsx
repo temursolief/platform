@@ -111,7 +111,11 @@ export default async function ResultPage({ params, searchParams }: PageProps) {
       </div>
 
       {/* Answer Review */}
-      <ResultReview sections={test.sections} answers={answers ?? []} />
+      <ResultReview
+        sections={test.sections}
+        answers={answers ?? []}
+        questionTimings={attempt.question_timings ?? null}
+      />
 
       {/* Actions */}
       <div className="mt-8 flex gap-4">

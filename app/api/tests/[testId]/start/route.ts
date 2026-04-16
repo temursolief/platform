@@ -40,6 +40,11 @@ export async function POST(_request: Request, { params }: RouteParams) {
     .maybeSingle()
 
   if (existingAttempt) {
+    // Reset started_at so time_taken_seconds reflects this session, not a stale one
+    await supabase
+      .from('attempts')
+      .update({ started_at: new Date().toISOString() })
+      .eq('id', existingAttempt.id)
     return NextResponse.json({ attemptId: existingAttempt.id })
   }
 
@@ -49,6 +54,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
       student_id: user.id,
       test_id: testId,
       total_questions: test.total_questions,
+      started_at: new Date().toISOString(),
       is_completed: false,
     })
     .select('id')

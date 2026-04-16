@@ -15,7 +15,7 @@ export async function POST(request: Request, { params }: RouteParams) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { attemptId, answers } = await request.json()
+  const { attemptId, answers, questionTimings } = await request.json()
 
   if (!attemptId || !answers) {
     return NextResponse.json({ error: 'attemptId and answers are required' }, { status: 400 })
@@ -81,6 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       total_questions: questions.length,
       band_score: bandScore,
       time_taken_seconds: timeTaken,
+      question_timings: questionTimings ?? null,
       is_completed: true,
     })
     .eq('id', attemptId)

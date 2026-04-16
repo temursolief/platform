@@ -13,6 +13,8 @@ import { PassageViewer } from '@/components/test/PassageViewer'
 import { QuestionCard } from '@/components/test/QuestionCard'
 import { AnswerSheet } from '@/components/test/AnswerSheet'
 import { minutesToSeconds } from '@/lib/utils/time'
+import { applyHighlightInContainer } from '@/lib/utils/highlight'
+import { useQuestionTimer } from '@/hooks/useQuestionTimer'
 
 interface TestInterfaceProps {
   test: TestWithSections
@@ -27,6 +29,19 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const questionsRef = useRef<HTMLDivElement>(null)
+  const [splitPercent, setSplitPercent] = useState(50)
+  const isDragging = useRef(false)
+  // Per-section highlight HTML — local only, never sent to server
+  const [sectionHighlights, setSectionHighlights] = useState<Record<string, string>>({})
+  // Shared highlight state for both passage and questions panels
+  const [highlightMode, setHighlightMode] = useState(false)
+  const [activeColor, setActiveColor] = useState('hl-yellow')
+  const activeColorRef = useRef(activeColor)
+  useEffect(() => { activeColorRef.current = activeColor }, [activeColor])
+
+  const { startQuestion, pauseQuestion, clearSection, getTimings } = useQuestionTimer()
 
   const {
     answers,
@@ -108,6 +123,69 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
     document.documentElement.requestFullscreen?.().catch(() => {})
   }
 
+  // ── Question time tracking via IntersectionObserver ───────────────────────
+  useEffect(() => {
+    if (!questionsRef.current || !currentSection) return
+
+    const container = questionsRef.current
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const qId = entry.target.getAttribute('data-question-id')
+          if (!qId) return
+          if (entry.isIntersecting) {
+            startQuestion(qId)
+          } else {
+            pauseQuestion(qId)
+          }
+        })
+      },
+      { root: container, threshold: 0.5 }
+    )
+
+    container.querySelectorAll('[data-question-id]').forEach((el) => observer.observe(el))
+
+    return () => {
+      observer.disconnect()
+      clearSection() // flush active timers before new section renders
+    }
+  }, [currentSectionIndex, startQuestion, pauseQuestion, clearSection, currentSection])
+
+  // Highlight handler for the questions panel — mirrors PassageViewer's logic
+  useEffect(() => {
+    if (!highlightMode) return
+    const handler = () => {
+      const selection = window.getSelection()
+      if (!selection || selection.isCollapsed) return
+      if (questionsRef.current?.contains(selection.anchorNode)) {
+        applyHighlightInContainer(questionsRef.current, activeColorRef.current)
+      }
+    }
+    document.addEventListener('mouseup', handler)
+    return () => document.removeEventListener('mouseup', handler)
+  }, [highlightMode])
+
+  const onDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current || !bodyRef.current) return
+      const rect = bodyRef.current.getBoundingClientRect()
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100
+      setSplitPercent(Math.min(Math.max(pct, 20), 80))
+    }
+
+    const onMouseUp = () => {
+      isDragging.current = false
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
   // ── Start / Submit ─────────────────────────────────────────────────────────
   const startTest = async () => {
     try {
@@ -132,7 +210,7 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
       const res = await fetch(`/api/tests/${test.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId, answers }),
+        body: JSON.stringify({ attemptId, answers, questionTimings: getTimings() }),
       })
 
       if (!res.ok) throw new Error('Failed to submit')
@@ -266,19 +344,36 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
       </div>
 
       {/* ── Body ────────────────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden flex">
+      <div ref={bodyRef} className="flex-1 overflow-hidden flex">
 
-        {/* Reading layout — split passage | questions */}
+        {/* Reading layout — split passage | questions, full width */}
         {currentSection && (
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-1/2 border-r border-neutral-200 overflow-hidden flex flex-col">
-              <PassageViewer
-                title={currentSection.title || undefined}
-                passageHtml={currentSection.passage_html || '<p>No passage content.</p>'}
-                instructions={currentSection.instructions || undefined}
-              />
+          <>
+            <div style={{ width: `${splitPercent}%` }} className="overflow-hidden flex flex-col flex-shrink-0">
+              <div className="flex flex-col h-full p-6 overflow-hidden">
+                <PassageViewer
+                  title={currentSection.title || undefined}
+                  passageHtml={currentSection.passage_html || '<p>No passage content.</p>'}
+                  instructions={currentSection.instructions || undefined}
+                  savedHtml={sectionHighlights[currentSection.id]}
+                  onHtmlChange={(html) =>
+                    setSectionHighlights((prev) => ({ ...prev, [currentSection.id]: html }))
+                  }
+                  highlightMode={highlightMode}
+                  onHighlightModeChange={setHighlightMode}
+                  activeColor={activeColor}
+                  onActiveColorChange={setActiveColor}
+                />
+              </div>
             </div>
-            <div className="w-1/2 overflow-y-auto p-6 space-y-4">
+
+            {/* Draggable divider */}
+            <div
+              className="w-1.5 bg-neutral-200 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors"
+              onMouseDown={onDividerMouseDown}
+            />
+
+            <div ref={questionsRef} className={`flex-1 overflow-y-auto p-6 space-y-4 ${highlightMode ? 'cursor-text select-text' : ''}`}>
               {currentSection.questions.map((question) => (
                 <QuestionCard
                   key={question.id}
@@ -289,22 +384,23 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
                 />
               ))}
             </div>
-          </div>
+          </>
         )}
+      </div>
 
-        {/* Answer Sheet Sidebar */}
-        <div className="w-52 border-l border-neutral-200 p-4 overflow-y-auto flex-shrink-0 bg-neutral-50/50">
-          <AnswerSheet
-            sections={test.sections}
-            answers={answers}
-            currentSectionIndex={currentSectionIndex}
-            onSelectSection={goToSection}
-          />
-        </div>
+      {/* ── Answer Sheet — bottom center ────────────────────────────────────── */}
+      <div className="border-t border-neutral-200 bg-white flex-shrink-0 px-6 py-2.5">
+        <AnswerSheet
+          sections={test.sections}
+          answers={answers}
+          currentSectionIndex={currentSectionIndex}
+          onSelectSection={goToSection}
+          layout="bottom"
+        />
       </div>
 
       {/* ── Section Footer Navigation ────────────────────────────────────────── */}
-      <footer className="px-6 py-3 border-t border-neutral-100 flex items-center justify-between flex-shrink-0 bg-white">
+      <footer className="px-6 py-3 border-t border-neutral-100 flex items-center justify-center gap-4 flex-shrink-0 bg-white">
         <Button
           variant="secondary"
           size="sm"
@@ -313,12 +409,6 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
         >
           ← Previous Section
         </Button>
-
-        <span className="text-xs text-neutral-400">
-          {currentSection?.title || `Section ${currentSectionIndex + 1}`}
-          {' '}— {currentSection?.questions.filter((q) => answers[q.id]?.trim()).length ?? 0}/
-          {currentSection?.questions.length ?? 0} answered
-        </span>
 
         {currentSectionIndex < test.sections.length - 1 ? (
           <Button variant="secondary" size="sm" onClick={nextSection}>
