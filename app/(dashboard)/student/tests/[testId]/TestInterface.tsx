@@ -14,7 +14,20 @@ import { QuestionCard } from '@/components/test/QuestionCard'
 import { AnswerSheet } from '@/components/test/AnswerSheet'
 import { minutesToSeconds } from '@/lib/utils/time'
 import { applyHighlightInContainer } from '@/lib/utils/highlight'
-import { useQuestionTimer } from '@/hooks/useQuestionTimer'
+import type { Question } from '@/lib/types'
+
+function groupByImage(questions: Question[]): { imageUrl: string | null; questions: Question[] }[] {
+  const groups: { imageUrl: string | null; questions: Question[] }[] = []
+  for (const q of questions) {
+    const last = groups[groups.length - 1]
+    if (last && last.imageUrl === (q.image_url ?? null)) {
+      last.questions.push(q)
+    } else {
+      groups.push({ imageUrl: q.image_url ?? null, questions: [q] })
+    }
+  }
+  return groups
+}
 
 interface TestInterfaceProps {
   test: TestWithSections
@@ -40,8 +53,6 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
   const [activeColor, setActiveColor] = useState('hl-yellow')
   const activeColorRef = useRef(activeColor)
   useEffect(() => { activeColorRef.current = activeColor }, [activeColor])
-
-  const { startQuestion, pauseQuestion, clearSection, getTimings } = useQuestionTimer()
 
   const {
     answers,
@@ -123,34 +134,6 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
     document.documentElement.requestFullscreen?.().catch(() => {})
   }
 
-  // ── Question time tracking via IntersectionObserver ───────────────────────
-  useEffect(() => {
-    if (!questionsRef.current || !currentSection) return
-
-    const container = questionsRef.current
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const qId = entry.target.getAttribute('data-question-id')
-          if (!qId) return
-          if (entry.isIntersecting) {
-            startQuestion(qId)
-          } else {
-            pauseQuestion(qId)
-          }
-        })
-      },
-      { root: container, threshold: 0.5 }
-    )
-
-    container.querySelectorAll('[data-question-id]').forEach((el) => observer.observe(el))
-
-    return () => {
-      observer.disconnect()
-      clearSection() // flush active timers before new section renders
-    }
-  }, [currentSectionIndex, startQuestion, pauseQuestion, clearSection, currentSection])
-
   // Highlight handler for the questions panel — mirrors PassageViewer's logic
   useEffect(() => {
     if (!highlightMode) return
@@ -210,7 +193,7 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
       const res = await fetch(`/api/tests/${test.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attemptId, answers, questionTimings: getTimings() }),
+        body: JSON.stringify({ attemptId, answers }),
       })
 
       if (!res.ok) throw new Error('Failed to submit')
@@ -374,14 +357,28 @@ export function TestInterface({ test, userId }: TestInterfaceProps) {
             />
 
             <div ref={questionsRef} className={`flex-1 overflow-y-auto p-6 space-y-4 ${highlightMode ? 'cursor-text select-text' : ''}`}>
-              {currentSection.questions.map((question) => (
-                <QuestionCard
-                  key={question.id}
-                  question={question}
-                  value={answers[question.id] || ''}
-                  onChange={(val) => setAnswer(question.id, val)}
-                  matchOptions={question.options?.map((o) => o.option_text) ?? []}
-                />
+              {groupByImage(currentSection.questions).map((group, gi) => (
+                <div key={gi} className="space-y-4">
+                  {group.imageUrl && (
+                    <div className="rounded-xl border border-neutral-200 overflow-hidden">
+                      <img
+                        src={group.imageUrl}
+                        alt="Diagram"
+                        className="w-full object-contain max-h-96"
+                      />
+                    </div>
+                  )}
+                  {group.questions.map((question) => (
+                    <QuestionCard
+                      key={question.id}
+                      question={question}
+                      value={answers[question.id] || ''}
+                      onChange={(val) => setAnswer(question.id, val)}
+                      matchOptions={question.options?.map((o) => o.option_text) ?? []}
+                      hideImage={!!group.imageUrl}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           </>

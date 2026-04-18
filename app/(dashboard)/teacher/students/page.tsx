@@ -20,8 +20,12 @@ export default async function TeacherStudentsPage() {
 
   const testIds = tests?.map((t) => t.id) ?? []
 
-  // Get completed attempts with student info (depends on testIds)
-  const { data: attempts } = testIds.length
+  type AttemptRow = {
+    id: string; student_id: string; submitted_at: string; band_score: number | null
+    users: { id: string; full_name: string | null; email: string; avatar_url: string | null; created_at: string } | null
+    tests: { title: string; type: string } | null
+  }
+  const { data: rawAttempts } = testIds.length
     ? await supabase
         .from('attempts')
         .select('id, student_id, submitted_at, band_score, users(id, full_name, email, created_at), tests(title, type)')
@@ -30,19 +34,21 @@ export default async function TeacherStudentsPage() {
         .order('submitted_at', { ascending: false })
         .limit(500)
     : { data: [] }
+  const attempts = rawAttempts as AttemptRow[] | null
 
   // Group by student
   const studentMap = new Map<string, {
-    user: { id: string; full_name: string | null; email: string; avatar_url: string | null; created_at: string }
-    attempts: typeof attempts
+    user: NonNullable<AttemptRow['users']>
+    attempts: AttemptRow[]
   }>()
 
   for (const attempt of (attempts ?? [])) {
     const sid = attempt.student_id
+    if (!attempt.users) continue
     if (!studentMap.has(sid)) {
       studentMap.set(sid, { user: attempt.users, attempts: [] })
     }
-    studentMap.get(sid)!.attempts!.push(attempt)
+    studentMap.get(sid)!.attempts.push(attempt)
   }
 
   const students = Array.from(studentMap.values()).sort(

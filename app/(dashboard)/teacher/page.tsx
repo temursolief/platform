@@ -27,7 +27,11 @@ export default async function TeacherDashboard() {
 
   // Fetch recent attempts on teacher's tests (depends on test IDs from above)
   const testIds = tests?.map((t) => t.id) ?? []
-  const { data: attempts } = testIds.length
+  type AttemptRow = {
+    id: string; student_id: string; submitted_at: string; band_score: number | null
+    users: { full_name: string | null; email: string } | null
+  }
+  const { data: rawAttempts } = testIds.length
     ? await supabase
         .from('attempts')
         .select('id, student_id, submitted_at, band_score, users(full_name, email)')
@@ -36,6 +40,7 @@ export default async function TeacherDashboard() {
         .order('submitted_at', { ascending: false })
         .limit(20)
     : { data: [] }
+  const attempts = rawAttempts as AttemptRow[] | null
 
   const publishedCount = tests?.filter((t) => t.is_published).length ?? 0
   const draftCount = (tests?.length ?? 0) - publishedCount

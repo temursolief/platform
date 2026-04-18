@@ -31,6 +31,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     correct_answer,
     acceptable_answers,
     hint,
+    image_url,
     options = [],
   } = body
 
@@ -50,6 +51,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         ? String(acceptable_answers).split(',').map((s: string) => s.trim()).filter(Boolean)
         : null,
       hint: hint || null,
+      image_url: image_url || null,
       points: 1,
     })
     .select()

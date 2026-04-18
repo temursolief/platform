@@ -19,8 +19,15 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  type AttemptRow = {
+    id: string; student_id: string; submitted_at: string
+    raw_score: number | null; total_questions: number | null
+    band_score: number | null; time_taken_seconds: number | null
+    users: { full_name: string | null; email: string } | null
+  }
+
   // Test (ownership verified) and attempts are independent — fetch in parallel
-  const [{ data: test }, { data: attempts }] = await Promise.all([
+  const [{ data: test }, { data: rawAttempts }] = await Promise.all([
     supabase
       .from('tests')
       .select('*, sections(*, questions(*))')
@@ -35,6 +42,7 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
       .order('submitted_at', { ascending: false })
       .limit(500),
   ])
+  const attempts = rawAttempts as AttemptRow[] | null
 
   if (!test) notFound()
 

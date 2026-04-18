@@ -24,6 +24,8 @@ interface QuestionCardProps {
   matchOptions?: string[]
   /** Pass all current answers so word-bank tiles can show "used" state */
   allAnswers?: Record<string, string>
+  /** Suppress the question image — used when the image is rendered above a group */
+  hideImage?: boolean
 }
 
 export function QuestionCard({
@@ -34,6 +36,7 @@ export function QuestionCard({
   isCorrect,
   matchOptions,
   allAnswers,
+  hideImage,
 }: QuestionCardProps) {
   const hasWordBank = (question.options?.length ?? 0) > 0
 
@@ -121,7 +124,6 @@ export function QuestionCard({
 
   return (
     <div
-      data-question-id={question.id}
       className={`p-4 rounded-xl border transition-colors ${
         showResult
           ? isCorrect
@@ -155,8 +157,8 @@ export function QuestionCard({
         )}
       </div>
 
-      {/* Question image (diagram, map, plan) */}
-      {question.image_url && (
+      {/* Question image (diagram, map, plan) — suppressed when shown above a group */}
+      {question.image_url && !hideImage && (
         <div className="mb-3">
           <img
             src={question.image_url}

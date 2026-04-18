@@ -14,7 +14,7 @@ export default async function StudentHistoryPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: attempts } = await supabase
+  const { data: rawAttempts } = await supabase
     .from('attempts')
     .select('id, test_id, submitted_at, raw_score, total_questions, band_score, time_taken_seconds, tests(id, title, type)')
     .eq('student_id', user.id)
@@ -22,12 +22,20 @@ export default async function StudentHistoryPage() {
     .order('submitted_at', { ascending: false })
     .limit(100)
 
+  type AttemptRow = {
+    id: string; test_id: string; submitted_at: string
+    raw_score: number | null; total_questions: number | null
+    band_score: number | null; time_taken_seconds: number | null
+    tests: { id: string; title: string; type: string } | null
+  }
+  const attempts = rawAttempts as AttemptRow[] | null
+
   const chartData = (attempts ?? [])
     .filter((a) => a.submitted_at && a.band_score)
     .map((a) => ({
       date: formatDate(a.submitted_at),
-      bandScore: a.band_score,
-      type: a.tests?.type ?? 'reading',
+      bandScore: a.band_score!,
+      type: (a.tests?.type ?? 'reading') as 'reading' | 'listening',
     }))
     .reverse()
 

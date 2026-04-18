@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Plus, Trash2, Eye, EyeOff, Settings, Save } from 'lucide-react'
+import { ChevronLeft, Plus, Trash2, Eye, EyeOff, Settings, Save, ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { Badge } from '@/components/ui/badge'
@@ -280,6 +280,11 @@ export default function EditTestPage({ params }: EditTestPageProps) {
                         <p className="text-sm text-neutral-800">{question.question_text}</p>
                         <p className="text-xs text-emerald-600 mt-0.5">Answer: {question.correct_answer}</p>
                       </div>
+                      {question.image_url && (
+                        <span title="Has diagram image" className="flex-shrink-0">
+                          <ImageIcon size={13} className="text-neutral-400 mt-0.5" />
+                        </span>
+                      )}
                       <Badge className="flex-shrink-0 text-xs">
                         {question.type.replace(/_/g, ' ')}
                       </Badge>
@@ -425,6 +430,7 @@ export default function EditTestPage({ params }: EditTestPageProps) {
         {showAddQuestion && (
           <QuestionEditor
             sectionId={showAddQuestion}
+            testId={testId}
             initialOrderNum={
               (test.sections.find((s) => s.id === showAddQuestion)?.questions.length ?? 0) + 1
             }

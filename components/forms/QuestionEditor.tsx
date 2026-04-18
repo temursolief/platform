@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { ImagePlus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import type { QuestionType } from '@/lib/types'
@@ -12,6 +13,7 @@ export interface QuestionDraft {
   correct_answer: string
   acceptable_answers: string
   hint: string
+  image_url: string | null
   options: { label: string; text: string; is_correct: boolean }[]
 }
 
@@ -22,6 +24,7 @@ const defaultQuestion = (): QuestionDraft => ({
   correct_answer: '',
   acceptable_answers: '',
   hint: '',
+  image_url: null,
   options: [
     { label: 'A', text: '', is_correct: false },
     { label: 'B', text: '', is_correct: false },
@@ -32,6 +35,7 @@ const defaultQuestion = (): QuestionDraft => ({
 
 interface QuestionEditorProps {
   sectionId: string
+  testId: string
   initialOrderNum?: number
   onSave: (question: QuestionDraft) => Promise<void>
   onCancel?: () => void
@@ -39,6 +43,7 @@ interface QuestionEditorProps {
 
 export function QuestionEditor({
   sectionId: _sectionId,
+  testId,
   initialOrderNum = 1,
   onSave,
   onCancel,
@@ -48,7 +53,31 @@ export function QuestionEditor({
     order_num: initialOrderNum,
   })
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('testId', testId)
+      fd.append('type', 'passage')
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+      update('image_url', data.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const update = (field: keyof QuestionDraft, value: unknown) => {
     setQuestion((q) => ({ ...q, [field]: value }))
@@ -265,6 +294,50 @@ export function QuestionEditor({
         onChange={(e) => update('hint', e.target.value)}
         placeholder="Shown to students during the test"
       />
+
+      {/* Diagram / image */}
+      <div>
+        <label className="text-sm font-medium text-neutral-700 block mb-2">
+          Diagram / Image <span className="text-neutral-400 font-normal">(optional)</span>
+        </label>
+        {question.image_url ? (
+          <div className="relative inline-block">
+            <img
+              src={question.image_url}
+              alt="Question diagram"
+              className="max-h-48 max-w-full rounded-lg border border-neutral-200 object-contain"
+            />
+            <button
+              type="button"
+              onClick={() => update('image_url', null)}
+              className="absolute top-1.5 right-1.5 bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-red-50 hover:border-red-200"
+              title="Remove image"
+            >
+              <X size={13} className="text-neutral-500" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-neutral-300 text-sm text-neutral-500 hover:border-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-50"
+          >
+            <ImagePlus size={15} />
+            {uploading ? 'Uploading…' : 'Upload diagram or chart'}
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
+        <p className="text-xs text-neutral-400 mt-1">
+          Questions sharing the same image will display it once above the group.
+        </p>
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

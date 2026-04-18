@@ -5,6 +5,19 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { QuestionCard } from '@/components/test/QuestionCard'
 import type { Question } from '@/lib/types'
 
+function groupByImage(questions: Question[]): { imageUrl: string | null; questions: Question[] }[] {
+  const groups: { imageUrl: string | null; questions: Question[] }[] = []
+  for (const q of questions) {
+    const last = groups[groups.length - 1]
+    if (last && last.imageUrl === (q.image_url ?? null)) {
+      last.questions.push(q)
+    } else {
+      groups.push({ imageUrl: q.image_url ?? null, questions: [q] })
+    }
+  }
+  return groups
+}
+
 interface AnswerRow {
   question_id: string
   given_answer: string | null
@@ -61,29 +74,42 @@ export function ResultReview({ sections, answers, questionTimings }: ResultRevie
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {section.questions.map((question, qi) => {
-                  const ans = answersMap.get(question.id)
-                  const timeMs = questionTimings?.[question.id]
-
-                  return (
-                    <div key={question.id ?? `q-${si}-${qi}`}>
-                      <QuestionCard
-                        question={question}
-                        value={ans?.given_answer ?? ''}
-                        onChange={() => {}}
-                        showResult={true}
-                        isCorrect={ans?.is_correct ?? false}
-                        matchOptions={question.options?.map((o) => o.option_text) ?? []}
-                      />
-                      {timeMs != null && (
-                        <div className="flex items-center gap-1 mt-1.5 text-xs text-neutral-400 justify-end">
-                          <Clock size={11} />
-                          <span>{formatMs(timeMs)} spent on this question</span>
+                {groupByImage(section.questions).map((group, gi) => (
+                  <div key={gi} className="space-y-4">
+                    {group.imageUrl && (
+                      <div className="rounded-xl border border-neutral-200 overflow-hidden">
+                        <img
+                          src={group.imageUrl}
+                          alt="Diagram"
+                          className="w-full object-contain max-h-96"
+                        />
+                      </div>
+                    )}
+                    {group.questions.map((question, qi) => {
+                      const ans = answersMap.get(question.id)
+                      const timeMs = questionTimings?.[question.id]
+                      return (
+                        <div key={question.id ?? `q-${si}-${gi}-${qi}`}>
+                          <QuestionCard
+                            question={question}
+                            value={ans?.given_answer ?? ''}
+                            onChange={() => {}}
+                            showResult={true}
+                            isCorrect={ans?.is_correct ?? false}
+                            matchOptions={question.options?.map((o) => o.option_text) ?? []}
+                            hideImage={!!group.imageUrl}
+                          />
+                          {timeMs != null && (
+                            <div className="flex items-center gap-1 mt-1.5 text-xs text-neutral-400 justify-end">
+                              <Clock size={11} />
+                              <span>{formatMs(timeMs)} spent on this question</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

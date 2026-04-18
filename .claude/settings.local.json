@@ -9,7 +9,12 @@
       "Bash(npx tsc:*)",
       "Bash(npx next:*)",
       "Bash(xargs grep:*)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(git -C /Users/temurbeksoliev/Desktop/platform ls-files .env.local)",
+      "Bash(git -C /Users/temurbeksoliev/Desktop/platform rm --cached .env.local)",
+      "Bash(git -C /Users/temurbeksoliev/Desktop/platform ls-files --error-unmatch .env.local)",
+      "Bash(git -C /Users/temurbeksoliev/Desktop/platform status --short)"
     ]
   }
 }
