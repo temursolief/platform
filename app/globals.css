@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
-/* ─── Design Tokens ─────────────────────────────────────────────────────── */
+/* ─── Velorah Design Tokens ──────────────────────────────────────────────── */
 :root {
-  --bg: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-muted: #9ca3af;
-  --border: #e5e7eb;
-  --border-focus: #111827;
-  --primary: #111827;
-  --primary-hover: #1f2937;
-  --success: #059669;
-  --error: #dc2626;
-  --warning: #d97706;
-  --info: #2563eb;
-  --answered: #111827;
-  --unanswered: #e5e7eb;
-  --current: #2563eb;
-  --background: #ffffff;
-  --foreground: #111827;
+  /* Backgrounds */
+  --bg: #FAF6F1;
+  --surface: #FFFCF6;
+  --surface-2: #F4EDE1;
+  --background: #FAF6F1;
+
+  /* Borders */
+  --line: #EDE5DB;
+  --line-2: #E4DACA;
+
+  /* Text */
+  --ink: #2A2420;
+  --ink-soft: #5A4E44;
+  --ink-muted: #9B9289;
+  --ink-faint: #BFB5A7;
+  --foreground: #2A2420;
+
+  /* Primary: coral / terracotta */
+  --primary: #E8846B;
+  --primary-ink: #B9563D;
+  --primary-soft: #FBE4DB;
+
+  /* Accent: sage green */
+  --accent: #7FA87A;
+  --accent-soft: #DCE8D6;
+  --accent-ink: #4C6F4A;
+
+  /* Gold / amber */
+  --gold: #E4B05C;
+  --gold-soft: #F7E5BF;
+  --gold-ink: #9A6D1E;
+
+  /* Rose */
+  --rose: #C45E7A;
+  --rose-soft: #F5D0DA;
+
+  /* Sky blue */
+  --sky: #5B9BD5;
+  --sky-soft: #D6E8F5;
+
+  /* Plum */
+  --plum: #C878A0;
+  --plum-soft: #F2D6E8;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 0 rgba(42,36,32,0.04);
+  --shadow-md: 0 4px 14px rgba(42,36,32,0.07), 0 1px 0 rgba(42,36,32,0.04);
+  --shadow-lg: 0 14px 40px rgba(42,36,32,0.09), 0 1px 0 rgba(42,36,32,0.04);
+
+  /* Legacy aliases (for exam UI) */
+  --border: #EDE5DB;
+  --border-focus: #2A2420;
+  --answered: #E8846B;
+  --unanswered: #EDE5DB;
+  --current: #E8846B;
+  --success: #7FA87A;
+  --error: #C45E7A;
+  --warning: #E4B05C;
+  --info: #5B9BD5;
+}
+
+/* ─── Dark Mode ──────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #1A1614;
+  --surface: #231E1B;
+  --surface-2: #2E2825;
+  --background: #1A1614;
+
+  --line: #3D3631;
+  --line-2: #4A423C;
+
+  --ink: #F5EFE8;
+  --ink-soft: #C8BDB4;
+  --ink-muted: #8A7F76;
+  --ink-faint: #5C534C;
+  --foreground: #F5EFE8;
+
+  --shadow-sm: 0 1px 0 rgba(0,0,0,0.25);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.45), 0 1px 0 rgba(0,0,0,0.25);
+  --shadow-lg: 0 14px 40px rgba(0,0,0,0.55), 0 1px 0 rgba(0,0,0,0.25);
+
+  --border: #3D3631;
+  --unanswered: #3D3631;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
@@ -29,13 +93,46 @@
 html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg);
+  color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: 'cv11', 'ss01';
   line-height: 1.5;
+}
+
+/* ─── Velorah Card ───────────────────────────────────────────────────────── */
+.velorah-card {
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Velorah Pill ───────────────────────────────────────────────────────── */
+.velorah-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* ─── Velorah Progress Bar ───────────────────────────────────────────────── */
+.velorah-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.velorah-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s ease;
 }
 
 /* ─── Text Selection (user can highlight) ────────────────────────────────── */

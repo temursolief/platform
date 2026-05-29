@@ -21,6 +21,13 @@ export function formatDateTime(dateString: string): string {
   })
 }
 
+export function formatClockTime(dateString: string): string {
+  return new Date(dateString).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function formatDifficulty(difficulty: string): string {
   return difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
 }

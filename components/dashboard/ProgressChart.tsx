@@ -15,8 +15,8 @@ export function ProgressChart({ data, height = 120 }: ProgressChartProps) {
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center text-sm text-neutral-400 bg-neutral-50 rounded-lg border border-neutral-100"
-        style={{ height }}
+        className="flex items-center justify-center text-sm rounded-xl"
+        style={{ height, background: 'var(--surface-2)', color: 'var(--ink-muted)', border: '1px solid var(--line)' }}
       >
         No data yet
       </div>
@@ -27,7 +27,6 @@ export function ProgressChart({ data, height = 120 }: ProgressChartProps) {
   const minScore = 0
   const range = maxScore - minScore
 
-  // Chart dimensions
   const paddingX = 40
   const paddingY = 16
   const chartWidth = 500
@@ -43,7 +42,6 @@ export function ProgressChart({ data, height = 120 }: ProgressChartProps) {
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`)
     .join(' ')
 
-  // Reference lines at 5.0, 6.0, 7.0, 8.0
   const refLines = [5, 6, 7, 8]
 
   return (
@@ -64,10 +62,11 @@ export function ProgressChart({ data, height = 120 }: ProgressChartProps) {
                 y1={y}
                 x2={chartWidth - paddingX}
                 y2={y}
-                stroke="#f3f4f6"
+                stroke="var(--line)"
                 strokeWidth="1"
+                strokeDasharray="3 4"
               />
-              <text x={paddingX - 6} y={y + 4} textAnchor="end" className="text-xs" fill="#9ca3af" fontSize="10">
+              <text x={paddingX - 6} y={y + 4} textAnchor="end" fill="var(--ink-muted)" fontSize="10" fontWeight="600">
                 {score}
               </text>
             </g>
@@ -79,20 +78,23 @@ export function ProgressChart({ data, height = 120 }: ProgressChartProps) {
           <path
             d={pathD}
             fill="none"
-            stroke="#111827"
-            strokeWidth="2"
+            stroke="var(--primary)"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         )}
 
-        {/* Points */}
-        {points.map((p, i) => (
-          <g key={i}>
-            <circle cx={p.x} cy={p.y} r={5} fill="white" stroke="#111827" strokeWidth="2" />
-            <title>{`${p.date}: Band ${p.bandScore} (${p.type})`}</title>
-          </g>
-        ))}
+        {/* Points colored by type */}
+        {points.map((p, i) => {
+          const color = p.type === 'listening' ? 'var(--plum)' : 'var(--sky)'
+          return (
+            <g key={i}>
+              <circle cx={p.x} cy={p.y} r={5} fill={color} stroke="var(--surface)" strokeWidth="2" />
+              <title>{`${p.date}: Band ${p.bandScore} (${p.type})`}</title>
+            </g>
+          )
+        })}
       </svg>
     </div>
   )

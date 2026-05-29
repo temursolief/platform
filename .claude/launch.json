@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["--max-old-space-size=4096", "node_modules/next/dist/bin/next", "dev"],
       "port": 3000
+    },
+    {
+      "name": "yt-transcript-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/temurbeksoliev/YouTubeExtracter/web && npx next dev -p 3001"],
+      "port": 3001
     }
   ]
 }

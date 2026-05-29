@@ -5,11 +5,17 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', hoverable = false, children, ...props }, ref) => {
+  ({ className = '', hoverable = false, children, style, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={`bg-white border border-neutral-200 rounded-xl p-6 ${hoverable ? 'transition-shadow hover:shadow-md cursor-pointer' : ''} ${className}`}
+        className={`rounded-2xl p-6 ${hoverable ? 'cursor-pointer transition-all hover:-translate-y-0.5' : ''} ${className}`}
+        style={{
+          background: 'var(--surface)',
+          border: '1.5px solid var(--line)',
+          boxShadow: 'var(--shadow-sm)',
+          ...style,
+        }}
         {...props}
       >
         {children}
@@ -29,7 +35,7 @@ export function CardHeader({ className = '', children, ...props }: React.HTMLAtt
 
 export function CardTitle({ className = '', children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={`text-lg font-semibold text-neutral-900 ${className}`} {...props}>
+    <h3 className={`text-lg font-semibold ${className}`} style={{ color: 'var(--ink)' }} {...props}>
       {children}
     </h3>
   )
@@ -37,7 +43,7 @@ export function CardTitle({ className = '', children, ...props }: React.HTMLAttr
 
 export function CardDescription({ className = '', children, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={`text-sm text-neutral-500 mt-1 ${className}`} {...props}>
+    <p className={`text-sm mt-1 ${className}`} style={{ color: 'var(--ink-muted)' }} {...props}>
       {children}
     </p>
   )
@@ -53,7 +59,11 @@ export function CardContent({ className = '', children, ...props }: React.HTMLAt
 
 export function CardFooter({ className = '', children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`mt-4 pt-4 border-t border-neutral-100 ${className}`} {...props}>
+    <div
+      className={`mt-4 pt-4 ${className}`}
+      style={{ borderTop: '1px solid var(--line)' }}
+      {...props}
+    >
       {children}
     </div>
   )

@@ -2,9 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { GraduationCap } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
 
 function GoogleIcon() {
   return (
@@ -22,7 +20,6 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
-  // Pick up any error message forwarded back from /auth/callback
   useEffect(() => {
     const urlError = searchParams.get('error')
     if (urlError) setError(decodeURIComponent(urlError))
@@ -51,41 +48,80 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-neutral-50 px-4">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center px-4"
+      style={{ background: 'var(--bg)' }}
+    >
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <GraduationCap size={32} className="text-neutral-900" />
+          <div className="flex items-center justify-center mb-5">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center font-bold text-white"
+              style={{ background: 'var(--primary)', fontSize: '28px', fontFamily: 'Georgia, serif' }}
+            >
+              I
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-neutral-900">IELTS Pro</h1>
-          <p className="text-neutral-500 text-sm mt-2">Sign in to start practicing</p>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: 'var(--ink)', fontFamily: 'Georgia, serif' }}
+          >
+            IELTS Pro
+          </h1>
+          <p className="text-sm mt-2" style={{ color: 'var(--ink-muted)' }}>
+            Sign in to start practising
+          </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-8 shadow-sm">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-2">Welcome back</h2>
-          <p className="text-sm text-neutral-500 mb-6">
+        <div
+          className="rounded-2xl p-8"
+          style={{
+            background: 'var(--surface)',
+            border: '1.5px solid var(--line)',
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          <h2
+            className="text-lg font-bold mb-2"
+            style={{ color: 'var(--ink)', fontFamily: 'Georgia, serif' }}
+          >
+            Welcome back
+          </h2>
+          <p className="text-sm mb-6" style={{ color: 'var(--ink-muted)' }}>
             Use your Google account to sign in or create a new account.
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div
+              className="mb-4 p-3 rounded-xl text-sm"
+              style={{
+                background: 'var(--rose-soft)',
+                border: '1px solid var(--rose)',
+                color: 'var(--rose)',
+              }}
+            >
               {error}
             </div>
           )}
 
-          <Button
+          <button
             onClick={handleGoogleLogin}
-            loading={loading}
-            variant="secondary"
-            className="w-full gap-3 h-11"
+            disabled={loading}
+            className="w-full h-11 flex items-center justify-center gap-3 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+            style={{
+              background: 'var(--surface-2)',
+              border: '1.5px solid var(--line)',
+              color: 'var(--ink)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
           >
             {!loading && <GoogleIcon />}
-            Continue with Google
-          </Button>
+            {loading ? 'Signing in…' : 'Continue with Google'}
+          </button>
 
-          <p className="text-xs text-neutral-400 text-center mt-6">
+          <p className="text-xs text-center mt-6" style={{ color: 'var(--ink-faint)' }}>
             By signing in, you agree to our terms. New users are registered as students.
             Contact your teacher to get teacher access.
           </p>

@@ -12,8 +12,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className="h-full antialiased bg-white text-neutral-900" suppressHydrationWarning>
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      {/* Inline script runs before paint — prevents dark-mode flash */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('ielts-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="h-full antialiased" suppressHydrationWarning>
         {children}
       </body>
     </html>

@@ -14,7 +14,13 @@
       "Bash(git -C /Users/temurbeksoliev/Desktop/platform ls-files .env.local)",
       "Bash(git -C /Users/temurbeksoliev/Desktop/platform rm --cached .env.local)",
       "Bash(git -C /Users/temurbeksoliev/Desktop/platform ls-files --error-unmatch .env.local)",
-      "Bash(git -C /Users/temurbeksoliev/Desktop/platform status --short)"
+      "Bash(git -C /Users/temurbeksoliev/Desktop/platform status --short)",
+      "Bash(pip install *)",
+      "Bash(python extractor.py --help)",
+      "Bash(python3 -c \"import youtube_transcript_api; print\\(youtube_transcript_api.__version__\\); help\\(youtube_transcript_api.YouTubeTranscriptApi\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['title']\\); print\\(d['published']\\); print\\(d['transcript'][:200]\\)\")",
+      "WebFetch(domain:claude.ai)",
+      "Bash(node -e \"console.log\\(require\\('/Users/temurbeksoliev/Desktop/platform/node_modules/@supabase/ssr/package.json'\\).version\\)\")"
     ]
   }
 }

@@ -22,6 +22,15 @@ export async function createClient() {
           }
         },
       },
+      // Disable auto-refresh on server: the middleware (proxy.ts) owns token
+      // refresh. Server components only need to read/validate the current token.
+      // Without this, middleware and server component race on the same auth lock
+      // producing "lock was released because another request stole it" errors.
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
     }
   )
 }

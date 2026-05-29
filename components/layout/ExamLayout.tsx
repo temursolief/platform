@@ -17,7 +17,7 @@ export function ExamLayout({ profile, children }: ExamLayoutProps) {
   const isExam = EXAM_PATTERN.test(pathname)
 
   return (
-    <div className="flex h-screen bg-neutral-50">
+    <div className="flex h-screen" style={{ background: 'var(--bg)' }}>
       {!isExam && <Sidebar profile={profile} />}
       <main className={`flex-1 min-w-0 ${isExam ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {children}

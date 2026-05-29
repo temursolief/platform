@@ -1,13 +1,43 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { ChevronLeft, Users, BarChart2, Clock, CheckCircle2 } from 'lucide-react'
-import { formatBandScore, formatDate, formatScore } from '@/lib/utils/format'
+import { formatBandScore, formatDate, formatClockTime, formatScore } from '@/lib/utils/format'
 import { formatDuration } from '@/lib/utils/time'
-import { getBandColor } from '@/lib/scoring/band-tables'
+
+const ChevronLeftIcon = () => (
+  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 18l-6-6 6-6"/>
+  </svg>
+)
+const UsersIcon = () => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="8" r="3.5"/>
+    <circle cx="17" cy="10" r="2.5"/>
+    <path d="M3 20c0-3 3-5 6-5s6 2 6 5M15 20c0-2 2-3.5 4-3.5s3 1 3 3"/>
+  </svg>
+)
+const ChartIcon = () => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 5-6"/>
+  </svg>
+)
+const ClockIcon = () => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+  </svg>
+)
+const CheckIcon = () => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>
+  </svg>
+)
+
+function bandToColor(band: number): string {
+  if (band >= 8) return 'var(--accent)'
+  if (band >= 7) return 'var(--sky)'
+  if (band >= 6) return 'var(--primary)'
+  return 'var(--rose)'
+}
 
 interface PageProps {
   params: Promise<{ testId: string }>
@@ -26,7 +56,6 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
     users: { full_name: string | null; email: string } | null
   }
 
-  // Test (ownership verified) and attempts are independent — fetch in parallel
   const [{ data: test }, { data: rawAttempts }] = await Promise.all([
     supabase
       .from('tests')
@@ -54,7 +83,6 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
         .in('attempt_id', attemptIds)
     : { data: [] }
 
-  // Per-question stats
   const allQuestions = (test.sections ?? [])
     .sort((a: { order_num: number }, b: { order_num: number }) => a.order_num - b.order_num)
     .flatMap((s: { questions: { id: string; order_num: number; question_text: string }[] }) => s.questions)
@@ -64,14 +92,7 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
     const qAnswers = (answers ?? []).filter((a) => a.question_id === q.id)
     const correct = qAnswers.filter((a) => a.is_correct).length
     const total = qAnswers.length
-    return {
-      id: q.id,
-      order_num: q.order_num,
-      question_text: q.question_text,
-      correct,
-      total,
-      rate: total ? Math.round((correct / total) * 100) : null,
-    }
+    return { id: q.id, order_num: q.order_num, question_text: q.question_text, correct, total, rate: total ? Math.round((correct / total) * 100) : null }
   })
 
   const totalAttempts = attempts?.length ?? 0
@@ -85,154 +106,176 @@ export default async function TestAnalyticsPage({ params }: PageProps) {
     ? Math.round(attempts!.reduce((s, a) => s + (a.raw_score ?? 0), 0) / totalAttempts)
     : null
 
+  const bandBuckets = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9]
+  const bandCounts = bandBuckets.map(b => ({
+    band: b,
+    count: (attempts ?? []).filter(a => a.band_score === b).length,
+  }))
+  const maxCount = Math.max(...bandCounts.map(b => b.count), 1)
+
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <div className="mb-6">
+    <div className="py-8 px-10 max-w-[1200px]">
+      {/* Back + header */}
+      <div className="mb-8">
         <Link
           href={`/teacher/tests/${testId}`}
-          className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 mb-4"
+          className="inline-flex items-center gap-1 text-sm font-semibold mb-4 transition-opacity hover:opacity-70"
+          style={{ color: 'var(--ink-muted)' }}
         >
-          <ChevronLeft size={16} /> Back to Test
+          <ChevronLeftIcon /> Back to Test
         </Link>
-        <h1 className="text-2xl font-bold text-neutral-900">{test.title}</h1>
-        <p className="text-neutral-500 mt-1">Analytics & Student Performance</p>
+        <h1 className="text-4xl font-bold leading-none" style={{ color: 'var(--ink)', fontFamily: 'Georgia, serif' }}>
+          {test.title}
+        </h1>
+        <p className="text-sm mt-2" style={{ color: 'var(--ink-muted)' }}>Analytics &amp; Student Performance</p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <Users size={20} className="text-neutral-500" />
+      {/* Summary stats */}
+      <div className="grid grid-cols-4 gap-4 mb-8">
+        {[
+          { label: 'ATTEMPTS', value: totalAttempts, color: 'var(--ink)', bg: 'var(--surface)', icon: <UsersIcon /> },
+          { label: 'AVG BAND SCORE', value: avgBand ? formatBandScore(avgBand) : '—', color: 'var(--primary)', bg: 'var(--primary-soft)', icon: <ChartIcon /> },
+          { label: 'AVG RAW SCORE', value: avgScore !== null ? `${avgScore}/${test.total_questions}` : '—', color: 'var(--accent-ink)', bg: 'var(--accent-soft)', icon: <CheckIcon /> },
+          { label: 'AVG TIME TAKEN', value: avgTime ? formatDuration(avgTime) : '—', color: 'var(--gold-ink)', bg: 'var(--gold-soft)', icon: <ClockIcon /> },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl p-5" style={{ background: s.bg, border: '1.5px solid var(--line)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-[10px] font-bold tracking-widest" style={{ color: 'var(--ink-muted)' }}>{s.label}</div>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.6)', color: s.color }}>
+                {s.icon}
+              </div>
+            </div>
+            <div className="text-4xl font-bold leading-none" style={{ color: s.color, fontFamily: 'Georgia, serif' }}>{s.value}</div>
           </div>
-          <p className="text-3xl font-bold text-neutral-900">{totalAttempts}</p>
-          <p className="text-xs text-neutral-500 mt-1">Attempts</p>
-        </Card>
-        <Card className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <BarChart2 size={20} className="text-neutral-500" />
-          </div>
-          <p className="text-3xl font-bold text-neutral-900">
-            {avgBand ? formatBandScore(avgBand) : '—'}
-          </p>
-          <p className="text-xs text-neutral-500 mt-1">Avg Band Score</p>
-        </Card>
-        <Card className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <CheckCircle2 size={20} className="text-neutral-500" />
-          </div>
-          <p className="text-3xl font-bold text-neutral-900">
-            {avgScore !== null ? `${avgScore}/${test.total_questions}` : '—'}
-          </p>
-          <p className="text-xs text-neutral-500 mt-1">Avg Raw Score</p>
-        </Card>
-        <Card className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            <Clock size={20} className="text-neutral-500" />
-          </div>
-          <p className="text-3xl font-bold text-neutral-900">
-            {avgTime ? formatDuration(avgTime) : '—'}
-          </p>
-          <p className="text-xs text-neutral-500 mt-1">Avg Time Taken</p>
-        </Card>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Student Attempts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Student Results</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="grid grid-cols-12 gap-6 mb-6">
+        {/* Student results */}
+        <div className="col-span-7">
+          <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--ink)', fontFamily: 'Georgia, serif' }}>Student Results</h2>
+          <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid var(--line)', background: 'var(--surface)' }}>
             {!totalAttempts ? (
-              <p className="text-sm text-neutral-400 text-center py-4">No attempts yet</p>
+              <div className="py-12 text-center">
+                <p className="text-sm" style={{ color: 'var(--ink-muted)' }}>No attempts yet</p>
+              </div>
             ) : (
-              <div className="divide-y divide-neutral-100">
-                {attempts!.map((attempt) => (
-                  <div key={attempt.id} className="py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center text-xs font-medium text-neutral-600">
-                        {attempt.users?.full_name?.[0]?.toUpperCase() || '?'}
+              <>
+                <div className="grid gap-4 px-5 py-3 text-[10px] font-bold tracking-widest"
+                     style={{ gridTemplateColumns: '1fr 150px 80px 60px', color: 'var(--ink-muted)', borderBottom: '1.5px solid var(--line)' }}>
+                  <div>STUDENT</div><div>DATE &amp; TIME</div><div>SCORE</div><div>BAND</div>
+                </div>
+                {attempts!.map((attempt, i) => {
+                  const initials = attempt.users?.full_name
+                    ? attempt.users.full_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+                    : attempt.users?.email?.[0]?.toUpperCase() || '?'
+                  return (
+                    <div key={attempt.id}
+                         className="grid gap-4 px-5 py-4 items-center transition-colors hover:bg-[var(--surface-2)]"
+                         style={{ gridTemplateColumns: '1fr 150px 80px 60px', borderTop: i === 0 ? 'none' : '1px solid var(--line)' }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0"
+                             style={{ background: 'var(--accent)' }}>
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                            {attempt.users?.full_name || attempt.users?.email || 'Unknown'}
+                          </p>
+                          {attempt.time_taken_seconds && (
+                            <p className="text-xs" style={{ color: 'var(--ink-muted)' }}>
+                              {formatDuration(attempt.time_taken_seconds)}
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-neutral-900">
-                          {attempt.users?.full_name || attempt.users?.email || 'Unknown'}
-                        </p>
-                        <p className="text-xs text-neutral-400">
-                          {formatDate(attempt.submitted_at)} · {formatScore(attempt.raw_score, attempt.total_questions)}
-                        </p>
+                        <div className="text-sm" style={{ color: 'var(--ink-soft)' }}>{formatDate(attempt.submitted_at)}</div>
+                        <div className="text-xs" style={{ color: 'var(--ink-muted)' }}>{formatClockTime(attempt.submitted_at)}</div>
+                      </div>
+                      <div className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
+                        {formatScore(attempt.raw_score, attempt.total_questions)}
+                      </div>
+                      <div>
+                        <span className="text-2xl font-bold" style={{ color: bandToColor(attempt.band_score ?? 0), fontFamily: 'Georgia, serif' }}>
+                          {formatBandScore(attempt.band_score)}
+                        </span>
                       </div>
                     </div>
-                    <span className={`text-lg font-bold tabular-nums ${getBandColor(attempt.band_score ?? 0)}`}>
-                      {formatBandScore(attempt.band_score)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                  )
+                })}
+              </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Question difficulty */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Question Difficulty</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="col-span-5">
+          <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--ink)', fontFamily: 'Georgia, serif' }}>Question Difficulty</h2>
+          <div className="rounded-2xl p-5 max-h-[520px] overflow-y-auto"
+               style={{ background: 'var(--surface)', border: '1.5px solid var(--line)' }}>
             {!totalAttempts ? (
-              <p className="text-sm text-neutral-400 text-center py-4">No data yet</p>
+              <p className="text-sm text-center py-4" style={{ color: 'var(--ink-muted)' }}>No data yet</p>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {questionStats.map((qs) => (
-                  <div key={qs.id}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-neutral-600 truncate max-w-[200px]">
-                        Q{qs.order_num}. {qs.question_text.substring(0, 40)}{qs.question_text.length > 40 ? '…' : ''}
-                      </span>
-                      <span className="text-xs font-medium text-neutral-700 flex-shrink-0 ml-2">
-                        {qs.rate !== null ? `${qs.rate}%` : '—'}
-                      </span>
+              <div className="space-y-4">
+                {questionStats.map((qs) => {
+                  const acc = qs.rate ?? 0
+                  const barColor = acc >= 70 ? 'var(--accent)' : acc >= 40 ? 'var(--gold)' : 'var(--rose)'
+                  const textColor = acc >= 70 ? 'var(--accent-ink)' : acc >= 40 ? 'var(--gold-ink)' : 'var(--rose)'
+                  return (
+                    <div key={qs.id}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold truncate max-w-[180px]" style={{ color: 'var(--ink)' }}>
+                          Q{qs.order_num}. {qs.question_text.substring(0, 38)}{qs.question_text.length > 38 ? '…' : ''}
+                        </span>
+                        <span className="text-xs font-bold ml-2 shrink-0" style={{ color: textColor }}>
+                          {qs.rate !== null ? `${qs.rate}%` : '—'}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+                        <div className="h-full rounded-full transition-all"
+                             style={{ width: `${acc}%`, background: barColor }} />
+                      </div>
+                      <div className="text-[10px] mt-0.5" style={{ color: 'var(--ink-muted)' }}>
+                        {qs.correct}/{qs.total} correct
+                      </div>
                     </div>
-                    <Progress
-                      value={qs.rate ?? 0}
-                      color={
-                        (qs.rate ?? 0) >= 70 ? 'success' :
-                        (qs.rate ?? 0) >= 40 ? 'warning' : 'danger'
-                      }
-                    />
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Band Distribution */}
+      {/* Band distribution chart */}
       {totalAttempts > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Band Score Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-3 h-32">
-              {[4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map((band) => {
-                const count = attempts!.filter((a) => a.band_score === band).length
-                const height = totalAttempts ? Math.max((count / totalAttempts) * 100, count > 0 ? 8 : 0) : 0
-                return (
-                  <div key={band} className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-xs text-neutral-500">{count > 0 ? count : ''}</span>
-                    <div
-                      className="w-full bg-neutral-900 rounded-t transition-all"
-                      style={{ height: `${height}%`, minHeight: count > 0 ? '4px' : '0' }}
-                      title={`Band ${band}: ${count} student(s)`}
-                    />
-                    <span className="text-xs text-neutral-400">{band}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl p-6" style={{ background: 'var(--surface)', border: '1.5px solid var(--line)' }}>
+          <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--ink)', fontFamily: 'Georgia, serif' }}>Band Distribution</h2>
+          <div className="flex items-end gap-2" style={{ height: '140px' }}>
+            {bandCounts.map(({ band, count }) => {
+              const pct = (count / maxCount) * 100
+              const color = bandToColor(band)
+              return (
+                <div key={band} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs font-semibold" style={{ color: count > 0 ? 'var(--ink)' : 'transparent' }}>
+                    {count > 0 ? count : ''}
+                  </span>
+                  <div className="w-full rounded-t-lg transition-all"
+                       style={{
+                         height: count > 0 ? `${Math.max(pct, 8)}%` : '0%',
+                         background: color,
+                         opacity: 0.85,
+                         minHeight: count > 0 ? '6px' : '0',
+                       }}
+                       title={`Band ${band}: ${count} student${count !== 1 ? 's' : ''}`}
+                  />
+                  <span className="text-[10px] font-bold" style={{ color: 'var(--ink-muted)' }}>{band}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       )}
     </div>
   )
