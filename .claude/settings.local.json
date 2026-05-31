@@ -20,7 +20,12 @@
       "Bash(python3 -c \"import youtube_transcript_api; print\\(youtube_transcript_api.__version__\\); help\\(youtube_transcript_api.YouTubeTranscriptApi\\)\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['title']\\); print\\(d['published']\\); print\\(d['transcript'][:200]\\)\")",
       "WebFetch(domain:claude.ai)",
-      "Bash(node -e \"console.log\\(require\\('/Users/temurbeksoliev/Desktop/platform/node_modules/@supabase/ssr/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\(require\\('/Users/temurbeksoliev/Desktop/platform/node_modules/@supabase/ssr/package.json'\\).version\\)\")",
+      "Bash(mkdir -p /Users/temurbeksoliev/Desktop/platform/app/api/vocabulary/review && mkdir -p /Users/temurbeksoliev/Desktop/platform/app/api/vocabulary/\\\\[id\\\\]/review)",
+      "Bash(xargs ls -lh)"
+    ],
+    "additionalDirectories": [
+      "/Users/temurbeksoliev/Desktop/platform/app/api/vocabulary/[id]"
     ]
   }
 }

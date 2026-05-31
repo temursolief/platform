@@ -138,6 +138,71 @@ export interface AttemptWithDetails extends Attempt {
   answers: Answer[]
 }
 
+export interface VocabularyEntry {
+  id: string
+  student_id: string
+  word: string
+  definition: string
+  example_sentence: string | null
+  translation: string | null
+  notes: string | null
+  created_at: string
+  review?: FlashcardReview
+}
+
+export interface FlashcardReview {
+  id: string
+  entry_id: string
+  student_id: string
+  ease_factor: number
+  interval_days: number
+  repetitions: number
+  due_date: string
+  last_reviewed_at: string | null
+}
+
+// 0=Again, 1=Hard, 2=Good, 3=Easy
+export type ReviewRating = 0 | 1 | 2 | 3
+
+export interface PassageFlashcardCollection {
+  id: string
+  section_id: string
+  teacher_id: string
+  title: string
+  created_at: string
+}
+
+export interface PassageFlashcardItem {
+  id: string
+  collection_id: string
+  word: string
+  definition: string
+  example_sentence: string | null
+  translation: string | null
+  notes: string | null
+  order_num: number
+  created_at: string
+  progress?: PassageFlashcardProgress | null
+}
+
+export interface PassageFlashcardProgress {
+  id: string
+  student_id: string
+  item_id: string
+  ease_factor: number
+  interval_days: number
+  repetitions: number
+  due_date: string
+  last_reviewed_at: string | null
+}
+
+export interface PassageCollectionWithStats extends PassageFlashcardCollection {
+  test_title: string
+  test_id: string
+  total_items: number
+  due_items: number
+}
+
 // API response types
 export interface SubmitTestResponse {
   attempt: Attempt

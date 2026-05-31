@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/modal'
 import { Badge } from '@/components/ui/badge'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { QuestionEditor, type QuestionDraft } from '@/components/forms/QuestionEditor'
+import { SectionFlashcardManager } from './SectionFlashcardManager'
 import type { TestWithSections } from '@/lib/types'
 import { formatDate } from '@/lib/utils/format'
 
@@ -293,8 +294,8 @@ export default function EditTestPage({ params }: EditTestPageProps) {
                 </div>
               )}
 
-              {/* Add question */}
-              <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/50">
+              {/* Section actions */}
+              <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/50 flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -303,6 +304,10 @@ export default function EditTestPage({ params }: EditTestPageProps) {
                 >
                   <Plus size={14} className="mr-1" /> Add Question
                 </Button>
+                <SectionFlashcardManager
+                  sectionId={section.id}
+                  sectionTitle={section.title || `Section ${section.order_num}`}
+                />
               </div>
             </div>
           ))}

@@ -21,6 +21,11 @@ const ClockIcon = () => (
   </svg>
 )
 const ChartIcon = () => <Ico d={['M3 3v18h18', 'M7 14l3-3 3 3 5-6']} />
+const CardsIcon = () => (
+  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>
+  </svg>
+)
 const UsersIcon = () => (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="9" cy="8" r="3.5"/>
@@ -45,6 +50,7 @@ const studentNav: NavItem[] = [
   { href: '/student/tests',      label: 'Tests',      icon: <BookIcon /> },
   { href: '/student/history',    label: 'History',    icon: <ClockIcon /> },
   { href: '/student/analytics',  label: 'Analytics',  icon: <ChartIcon /> },
+  { href: '/student/vocabulary', label: 'Vocabulary',  icon: <CardsIcon /> },
 ]
 
 const teacherNav: NavItem[] = [
